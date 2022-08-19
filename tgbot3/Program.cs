@@ -36,7 +36,7 @@ Console.WriteLine("Инициализация базы данных");
 var connection = new SqliteConnection("Data Source=usersdata.db");
 Console.WriteLine("База данных инициализирована.");
 Console.WriteLine("Инициализация токена");
-string botToken = "5561996874:AAH1NHrQLjiI5KTqda05AmYSGy__uUEG9Ho";
+string botToken = "[УДАЛЕНО]";
 Console.WriteLine("переменная токена инициализирована");
 var botClient = new TelegramBotClient(botToken);
 Console.WriteLine("токен инициализирован");
