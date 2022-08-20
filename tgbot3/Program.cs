@@ -12,7 +12,7 @@ namespace tgbot3
     class tgbot3
     {
         public static string machineName = Environment.MachineName;
-        public static string versionNumber = "0.0.0.3-alpha";
+        public static string versionNumber = "0.0.0.5-alpha";
         public static string buildInfoString = "<code>alpha, debug, non-release</code>";
         public static OperatingSystem osVersion = Environment.OSVersion;
 
