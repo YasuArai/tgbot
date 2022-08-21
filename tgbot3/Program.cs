@@ -16,7 +16,7 @@ namespace tgbot3
         public static string buildInfoString = "<code>alpha, debug, non-release</code>";
         public static OperatingSystem osVersion = Environment.OSVersion;
 
-        public async Task MainAsync()
+        public static async Task Main()
         {
             Console.WriteLine("Говнобот by CyanRed");
             Console.WriteLine("если вы это читаете, то namespaces инициализированы");
@@ -63,8 +63,8 @@ namespace tgbot3
                 AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
             };
             botClient.StartReceiving(
-                updateHandler: HandleUpdateAsyn.HandleUpdateAsync,
-        pollingErrorHandler: HandlePollingErrorAsyn.HandlePollingErrorAsync,
+                updateHandler: HandleUpdateAsync,
+        pollingErrorHandler: HandlePollingErrorAsync,
         receiverOptions: receiverOptions,
         cancellationToken: cts.Token
     );
@@ -81,6 +81,72 @@ namespace tgbot3
 
             // Send cancellation request to stop bot
             cts.Cancel();
+
+            Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+            {
+                var ErrorMessage = exception switch
+                {
+                    ApiRequestException apiRequestException
+                        => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                    _ => exception.ToString()
+                };
+
+                Console.WriteLine(ErrorMessage);
+                return Task.CompletedTask;
+            }
+            async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+            {
+                // Only process Message updates: https://core.telegram.org/bots/api#message
+                if (update.Message is not { } message)
+                    return;
+                // Only process text messages
+                if (message.Text is not { } messageText)
+                    return;
+
+                var chatId = message.Chat.Id;
+
+                Console.WriteLine($"Received a '{messageText}' message in chat {chatId}.");
+
+
+                switch (messageText)
+                {
+                    case "/сисинфо":
+                        botClient.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "<b>Собираю информацию о системе...</b>",
+                        parseMode: ParseMode.Html,
+                        disableNotification: true,
+                        replyToMessageId: update.Message.MessageId,
+                        cancellationToken: cancellationToken);
+                        // if (cliArgs == "/verbose")
+                        // {
+                        //     Message sentMessage = await botClient.SendTextMessageAsync(
+                        //chatId: chatId,
+                        // text: $"Информация о боте\nБот без названия\nИмя хоста: {machineName}\nВерсия: {versionNumber}\nВерсия ОС: {osVersion}\nИнформация о сборке:\n{buildInfoString}\n \n<b>Shh...\nLet's not leak my hard work</b>\n \n<b>Режим verbose включён!</b>",
+                        // parseMode: ParseMode.Html,
+                        // disableNotification: true,
+                        // cancellationToken: cancellationToken);
+                        //    break;
+                        // };
+
+
+                        Message sentMessage1 = await botClient.SendTextMessageAsync(
+                        chatId: chatId,
+                         text: $"Информация о боте\nБот без названия\nИмя хоста: {machineName}\nВерсия: {versionNumber}\nВерсия ОС: {osVersion}\nИнформация о сборке:\n{buildInfoString}\n \n<b>Shh...\nLet's not leak my hard work</b>\n",
+                        parseMode: ParseMode.Html,
+                        disableNotification: true,
+                        cancellationToken: cancellationToken);
+                        break;
+
+                    default:
+                        // Echo received message text
+                        sentMessage1 = await botClient.SendTextMessageAsync(
+                        chatId: chatId,
+                        text: "You said:\n" + messageText,
+                        cancellationToken: cancellationToken);
+                        break;
+                }
+            }
 
         }
     }
