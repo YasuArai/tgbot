@@ -19,29 +19,24 @@ namespace tgbot1
     {
         public override string Get_props()
         {
-            StreamReader streamReader = new StreamReader("Properties\\Props.txt");
             try
             {
                 string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
-                string token = streamReader.ReadToEnd();
-                token = token.Trim();
-                token = token.Remove(file[0].Length, file[1].Length + 1);
+                string token;
+                token = file[0];
                 token = token.TrimStart('T', 'o', 'k', 'e', 'n', ' ', ':', ' ');
                 token = token.Trim(new Char[] { ' ', '[', ']' });
 
                 if (!(token.Length == 46))
                 {
                     Console.WriteLine("Не коректные данные");
-                    streamReader.Close();
                     Replase_Props();
                 }
-                streamReader.Close();
                 return token;
             }
             catch (Exception)
             {
                 Console.WriteLine("Не коректные данные");
-                streamReader.Close();
                 Replase_Props();
                 Create_props();
                 throw;
@@ -53,23 +48,64 @@ namespace tgbot1
     {
         public override string Get_props()
         {
-            StreamReader streamReader = new StreamReader("Properties\\Props.txt");
             try
             {
                 string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
-                string name = streamReader.ReadToEnd();
-                name = name.Trim();
-                name = name.Remove(0, file[0].Length + 1);
+                string name;
+                name = file[1];
                 name = name.TrimStart('B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' ');
                 name = name.Trim(new Char[] { ' ', '[', ']' });
-
-                streamReader.Close();
                 return name;
             }
             catch (Exception)
             {
                 Console.WriteLine("Не коректные данные");
-                streamReader.Close();
+                Replase_Props();
+                Create_props();
+                throw;
+            }
+        }
+    }
+
+    class Alo_BotVersion : ALO_Props
+    {
+        public override string Get_props()
+        {
+            try
+            {
+                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string version;
+                version = file[2];
+                version = version.TrimStart('B', 'o', 't', 'V', 'e', 'r', 's', 'i', 'o', 'n', ':', ' ');
+                version = version.Trim(new Char[] { ' ', '[', ']' });
+                return version;
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Не коректные данные");
+                Replase_Props();
+                Create_props();
+                throw;
+            }
+        }
+    }
+
+    class Alo_InfoSbork : ALO_Props
+    {
+        public override string Get_props()
+        {
+            try
+            {
+                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string info;
+                info = file[3];
+                info = info.TrimStart('I', 'n', 'f', 'o', 'S', 'b', 'o', 'r', 'k', ':', ' ');
+                info = info.Trim(new Char[] { ' ', '[', ']' });
+                return info;
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Не коректные данные");
                 Replase_Props();
                 Create_props();
                 throw;
@@ -90,7 +126,7 @@ namespace tgbot1
                 var file = System.IO.File.CreateText("Properties\\Props.txt");
                 file.Close();
                 StreamWriter sw = new StreamWriter("Properties\\Props.txt");
-                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]");
+                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]\nBotVersion : [BotVersion]\nInfoSbork : [InfoSbork]");
                 sw.Close();
                 Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\Props.txt");
                 Console.ReadLine();
@@ -113,7 +149,7 @@ namespace tgbot1
     {
         static void Main(string[] args)
         {
-            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props());
+            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props(), new Alo_BotVersion().Get_props(), new Alo_InfoSbork().Get_props());
         }
     }
 
@@ -125,10 +161,12 @@ namespace tgbot1
         public static string BotVersion { get; private set; }
         public static string Infosbork { get; private set; }
 
-        public ALO_bot(string Token, string Name)
+        public ALO_bot(string Token, string Name, string Version, string Info)
         {
             BotToken = Token;
             BotName = Name;
+            BotVersion = Version;
+            Infosbork = Info;
             botClient = new TelegramBotClient(Token);
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -168,8 +206,91 @@ namespace tgbot1
 
         private static string SiseInfo()
         {
-            return $"{BotToken}\n{BotName}";
+            return $"1 {BotToken}\n2 {BotName}\n3 {BotVersion}\n4 {Infosbork}\n5 {getOSInfo()}";
+        }
+
+        private static string getOSInfo()
+        {
+            //Get Operating system information.
+            OperatingSystem os = Environment.OSVersion;
+            //Get version information about the os.
+            Version vs = os.Version;
+
+            //Variable to hold our return value
+            string operatingSystem = "";
+
+            if (os.Platform == PlatformID.Win32Windows)
+            {
+                //This is a pre-NT version of Windows
+                switch (vs.Minor)
+                {
+                    case 0:
+                        operatingSystem = "95";
+                        break;
+                    case 10:
+                        if (vs.Revision.ToString() == "2222A")
+                            operatingSystem = "98SE";
+                        else
+                            operatingSystem = "98";
+                        break;
+                    case 90:
+                        operatingSystem = "Me";
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if (os.Platform == PlatformID.Win32NT)
+            {
+                switch (vs.Major)
+                {
+                    case 3:
+                        operatingSystem = "NT 3.51";
+                        break;
+                    case 4:
+                        operatingSystem = "NT 4.0";
+                        break;
+                    case 5:
+                        if (vs.Minor == 0)
+                            operatingSystem = "2000";
+                        else
+                            operatingSystem = "XP";
+                        break;
+                    case 6:
+                        if (vs.Minor == 0)
+                            operatingSystem = "Vista";
+                        else if (vs.Minor == 1)
+                            operatingSystem = "7";
+                        else if (vs.Minor == 2)
+                            operatingSystem = "8";
+                        else
+                            operatingSystem = "8.1";
+                        break;
+                    case 10:
+                        operatingSystem = "10";
+                        break;
+                    default:
+                        break;
+                }
+            }
+            //Make sure we actually got something in our OS check
+            //We don't want to just return " Service Pack 2" or " 32-bit"
+            //That information is useless without the OS version.
+            if (operatingSystem != "")
+            {
+                //Got something.  Let's prepend "Windows" and get more info.
+                operatingSystem = "Windows " + operatingSystem;
+                //See if there's a service pack installed.
+                if (os.ServicePack != "")
+                {
+                    //Append it to the OS name.  i.e. "Windows XP Service Pack 3"
+                    operatingSystem += " " + os.ServicePack;
+                }
+                //Append the OS architecture.  i.e. "Windows XP Service Pack 3 32-bit"
+                //operatingSystem += " " + getOSArchitecture().ToString() + "-bit";
+            }
+            //Return the information we've gathered.
+            return operatingSystem;
         }
     }
 }
-

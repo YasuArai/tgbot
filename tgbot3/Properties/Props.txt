@@ -1,2 +1,4 @@
 ﻿Token : 5607615477:AAF0hDWsnWV5Ga8wzzJeV4UfgKInBUx1hSM
 BotName : ALO bot
+BotVersion : 
+InfoSbork :
