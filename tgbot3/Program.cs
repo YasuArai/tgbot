@@ -21,7 +21,7 @@ namespace tgbot1
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string token;
                 token = file[0];
                 token = token.TrimStart('T', 'o', 'k', 'e', 'n', ' ', ':', ' ');
@@ -50,7 +50,7 @@ namespace tgbot1
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string name;
                 name = file[1];
                 name = name.TrimStart('B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' ');
@@ -73,7 +73,7 @@ namespace tgbot1
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string version;
                 version = file[2];
                 version = version.TrimStart('B', 'o', 't', 'V', 'e', 'r', 's', 'i', 'o', 'n', ':', ' ');
@@ -96,7 +96,7 @@ namespace tgbot1
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\Props.txt");
+                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string info;
                 info = file[3];
                 info = info.TrimStart('I', 'n', 'f', 'o', 'S', 'b', 'o', 'r', 'k', ':', ' ');
@@ -121,24 +121,24 @@ namespace tgbot1
             {
                 Directory.CreateDirectory("Properties");
             }
-            if (!System.IO.File.Exists("Properties\\Props.txt"))
+            if (!System.IO.File.Exists("Properties\\set.txt"))
             {
-                var file = System.IO.File.CreateText("Properties\\Props.txt");
+                var file = System.IO.File.CreateText("Properties\\set.txt");
                 file.Close();
-                StreamWriter sw = new StreamWriter("Properties\\Props.txt");
+                StreamWriter sw = new StreamWriter("Properties\\set.txt");
                 sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]\nBotVersion : [BotVersion]\nInfoSbork : [InfoSbork]");
                 sw.Close();
-                Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\Props.txt");
+                Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
                 Console.ReadLine();
             }
         }
         protected void Replase_Props()
         {
-            if (!System.IO.File.Exists("Properties\\Props.txt"))
+            if (!System.IO.File.Exists("Properties\\set.txt"))
             {
                 return;
             }
-            System.IO.File.Delete("Properties\\Props.txt");
+            System.IO.File.Delete("Properties\\set.txt");
             Create_props();
         }
 
@@ -160,6 +160,7 @@ namespace tgbot1
         public static string BotName { get; private set; }
         public static string BotVersion { get; private set; }
         public static string Infosbork { get; private set; }
+        //версия
 
         public ALO_bot(string Token, string Name, string Version, string Info)
         {
@@ -206,7 +207,7 @@ namespace tgbot1
 
         private static string SiseInfo()
         {
-            return $"1 {BotToken}\n2 {BotName}\n3 {BotVersion}\n4 {Infosbork}\n5 {getOSInfo()}";
+            return $"Информация о боте\nИмя: {BotName}\nВерсия: {BotVersion}\nИнформация о сборке: {Infosbork}\nОС Хоста: {getOSInfo()}";
         }
 
         private static string getOSInfo()
