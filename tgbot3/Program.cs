@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.IO;
+using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Telegram.Bot;
@@ -67,52 +68,6 @@ namespace tgbot1
         }
     }
 
-    class Alo_BotVersion : ALO_Props
-    {
-        public override string Get_props()
-        {
-            try
-            {
-                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-                string version;
-                version = file[2];
-                version = version.TrimStart('B', 'o', 't', 'V', 'e', 'r', 's', 'i', 'o', 'n', ':', ' ');
-                version = version.Trim(new Char[] { ' ', '[', ']' });
-                return version;
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("Не коректные данные");
-                Replase_Props();
-                Create_props();
-                throw;
-            }
-        }
-    }
-
-    class Alo_InfoSbork : ALO_Props
-    {
-        public override string Get_props()
-        {
-            try
-            {
-                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-                string info;
-                info = file[3];
-                info = info.TrimStart('I', 'n', 'f', 'o', 'S', 'b', 'o', 'r', 'k', ':', ' ');
-                info = info.Trim(new Char[] { ' ', '[', ']' });
-                return info;
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("Не коректные данные");
-                Replase_Props();
-                Create_props();
-                throw;
-            }
-        }
-    }
-
     abstract class ALO_Props
     {
         protected void Create_props()
@@ -126,7 +81,7 @@ namespace tgbot1
                 var file = System.IO.File.CreateText("Properties\\set.txt");
                 file.Close();
                 StreamWriter sw = new StreamWriter("Properties\\set.txt");
-                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]\nBotVersion : [BotVersion]\nInfoSbork : [InfoSbork]");
+                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]");
                 sw.Close();
                 Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
                 Console.ReadLine();
@@ -149,7 +104,7 @@ namespace tgbot1
     {
         static void Main(string[] args)
         {
-            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props(), new Alo_BotVersion().Get_props(), new Alo_InfoSbork().Get_props());
+            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props());
         }
     }
 
@@ -158,16 +113,14 @@ namespace tgbot1
         static TelegramBotClient botClient;
         public static string BotToken { get; private set; }
         public static string BotName { get; private set; }
-        public static string BotVersion { get; private set; }
-        public static string Infosbork { get; private set; }
+        public static string BotVersion { get; } = "0.0.0.6-alpha";
+        public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>";
         //версия
 
-        public ALO_bot(string Token, string Name, string Version, string Info)
+        public ALO_bot(string Token, string Name)
         {
             BotToken = Token;
             BotName = Name;
-            BotVersion = Version;
-            Infosbork = Info;
             botClient = new TelegramBotClient(Token);
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -192,7 +145,10 @@ namespace tgbot1
                 }
                 if (message.Text?.ToLower() == "/сисинфо")
                 {
-                    await botClient.SendTextMessageAsync(message.Chat, SiseInfo());
+#pragma warning disable CS4014
+                    botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: true);
+#pragma warning restore CS4014
+                    await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                     return;
                 }
 
@@ -207,7 +163,40 @@ namespace tgbot1
 
         private static string SiseInfo()
         {
-            return $"Информация о боте\nИмя: {BotName}\nВерсия: {BotVersion}\nИнформация о сборке: {Infosbork}\nОС Хоста: {getOSInfo()}";
+            return $"Информация о боте\nИмя: {BotName}\nВерсия: {BotVersion}\nИнформация о сборке: {Infosbork}\nОС Хоста: {getOSInfo()}\nИмя Хоста: {Environment.MachineName}\n{OutputResult("Процессор:", GetHardwareInfo("Win32_Processor", "Name"))}";
+        }
+
+        private static string OutputResult(string info, List<string> result)
+        {
+            if (info.Length > 0)
+                return info;
+
+            if (result.Count > 0)
+            {
+                for (int i = 0; i < result.Count; ++i)
+                    return result[i];
+            }
+            return info;
+        }
+        private static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
+        {
+            List<string> result = new List<string>();
+
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM " + WIN32_Class);
+
+            try
+            {
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    result.Add(obj[ClassItemField].ToString().Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            return result;
         }
 
         private static string getOSInfo()
