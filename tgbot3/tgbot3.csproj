@@ -8,7 +8,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <COMReference Include="VBScript_RegExp_10">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>0</VersionMinor>
+      <VersionMajor>1</VersionMajor>
+      <Guid>3f4daca7-160d-11d2-a8e9-00104b365c9f</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.8" />
+    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
     <PackageReference Include="System.Management" Version="6.0.0" />
     <PackageReference Include="Telegram.Bot" Version="18.0.0" />

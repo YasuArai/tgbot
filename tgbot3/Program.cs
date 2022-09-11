@@ -7,6 +7,7 @@ using System.IO;
 using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Runtime.InteropServices;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -25,10 +26,10 @@ namespace tgbot1
                 string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string token;
                 token = file[0];
-                token = token.TrimStart('T', 'o', 'k', 'e', 'n', ' ', ':', ' ');
-                token = token.Trim(new Char[] { ' ', '[', ']' });
+                token = token.TrimStart('T', 'o', 'k', 'e', 'n', ' ', ':', ' '); // удаляет 1 слово
+                token = token.Trim(new Char[] { ' ', '[', ']' }); // защита от дибила
 
-                if (!(token.Length == 46))
+                if (!(token.Length == 46)) // мало букв
                 {
                     Console.WriteLine("Не коректные данные");
                     Replase_Props();
@@ -54,8 +55,8 @@ namespace tgbot1
                 string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
                 string name;
                 name = file[1];
-                name = name.TrimStart('B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' ');
-                name = name.Trim(new Char[] { ' ', '[', ']' });
+                name = name.TrimStart('B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' '); // удаляет 1 слово
+                name = name.Trim(new Char[] { ' ', '[', ']' }); // защита от дибила
                 return name;
             }
             catch (Exception)
@@ -74,19 +75,20 @@ namespace tgbot1
         {
             if (!Directory.Exists("Properties"))
             {
-                Directory.CreateDirectory("Properties");
+                Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
             }
             if (!System.IO.File.Exists("Properties\\set.txt"))
             {
                 var file = System.IO.File.CreateText("Properties\\set.txt");
                 file.Close();
                 StreamWriter sw = new StreamWriter("Properties\\set.txt");
-                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]");
+                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]"); // что будет в документе
                 sw.Close();
                 Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
                 Console.ReadLine();
             }
-        }
+        } // создаёт документ
+
         protected void Replase_Props()
         {
             if (!System.IO.File.Exists("Properties\\set.txt"))
@@ -95,27 +97,26 @@ namespace tgbot1
             }
             System.IO.File.Delete("Properties\\set.txt");
             Create_props();
-        }
+        } // перезаписывает
 
         public abstract string Get_props();
-    }
+    }  // абстрактный класс получения настроек
 
     class Tgbot
     {
         static void Main(string[] args)
         {
-            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props());
+            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props()); // создаём класс ALO_bot и в конструктор добовляем токен и имя
         }
-    }
+    } // Main
 
     class ALO_bot
     {
         static TelegramBotClient botClient;
-        public static string BotToken { get; private set; }
-        public static string BotName { get; private set; }
-        public static string BotVersion { get; } = "0.0.0.6-alpha";
-        public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>";
-        //версия
+        public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
+        public static string BotName { get; private set; } // тута лежит имя если нада можно взять
+        public static string BotVersion { get; } = "0.0.0.6-alpha"; // тута лежит версия если нада можно взять
+        public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
         {
@@ -130,7 +131,7 @@ namespace tgbot1
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
             Console.ReadLine();
-        }
+        } // конструктор класа где всё вызывается и задоётся при создании класса
 
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
@@ -146,39 +147,38 @@ namespace tgbot1
                 if (message.Text?.ToLower() == "/сисинфо")
                 {
 #pragma warning disable CS4014
-                    botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: true);
+                    botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
 #pragma warning restore CS4014
-                    await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
+                    await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
                     return;
                 }
 
-                await botClient.SendTextMessageAsync(message.Chat, "Привет-привет!!");
+              //  await botClient.SendTextMessageAsync(message.Chat, "Привет-привет!!");
             }
-        }
+        }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
+
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             // Некоторые действия
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }// не трож, оно тебя сожрёт!!!
 
-        private static string SiseInfo()
+        private static string SiseInfo() // метод сис инфо
         {
-            return $"Информация о боте\nИмя: {BotName}\nВерсия: {BotVersion}\nИнформация о сборке: {Infosbork}\nОС Хоста: {getOSInfo()}\nИмя Хоста: {Environment.MachineName}\n{OutputResult("Процессор:", GetHardwareInfo("Win32_Processor", "Name"))}";
+            Process process = Process.GetCurrentProcess();
+            PerformanceCounter mem = new PerformanceCounter("Memory", "Available MBytes");
+            return $"Информация о боте"
+                   + $"\nИмя: {BotName}"
+                   + $"\nВерсия: {BotVersion}"
+                   + $"\nИнформация о сборке: {Infosbork}"
+                   + $"\nОС Хоста: {getOSInfo()}"
+                   + $"\nИмя Хоста: {Environment.MachineName}"
+                   + $"\nПроц Хоста: {GetHardwareInfo("Win32_Processor", "Name")[0]}"
+                   + $"\nКол-во свободной оперативной памяти: {mem.NextValue()} MB"
+                   + $"\nКол-во оперативной памяти занимаемой ботом: {Math.Ceiling((double)(process.PrivateMemorySize64/1024/1024))} MB";
         }
 
-        private static string OutputResult(string info, List<string> result)
-        {
-            if (info.Length > 0)
-                return info;
-
-            if (result.Count > 0)
-            {
-                for (int i = 0; i < result.Count; ++i)
-                    return result[i];
-            }
-            return info;
-        }
-        private static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
+        static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
         {
             List<string> result = new List<string>();
 
@@ -197,7 +197,7 @@ namespace tgbot1
             }
 
             return result;
-        }
+        } // получение проца
 
         private static string getOSInfo()
         {
@@ -281,6 +281,6 @@ namespace tgbot1
             }
             //Return the information we've gathered.
             return operatingSystem;
-        }
-    }
+        } // получение винды
+    } // это база
 }
