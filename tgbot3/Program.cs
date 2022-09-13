@@ -10,58 +10,20 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace tgbot1
 {
-    class Alo_BotToken : ALO_Props
-    {
-        public string Get_props()
-        {
-            try
-            {
-                string token = Get_props(0, new char[] { 'T', 'o', 'k', 'e', 'n', ':', ' ' });
-                if (!(token.Length == 46)) // мало букв
-                {
-                    Console.WriteLine("Не коректные данные");
-                    Replase_Props();
-                }
-                return token;
-            }
-            catch (Exception)
-            {
-                Exception();
-                throw;
-            }
-        }
-    }
-
-    class Alo_BotName : ALO_Props
-    {
-        public string Get_props()
-        {
-            try
-            {
-                return Get_props(1, new char[] { 'B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' ' });
-            }
-            catch (Exception)
-            {
-                Exception();
-                throw;
-            }
-        }
-    }
-
     class ALO_Props
     {
         protected void Create_props()
         {
             if (!Directory.Exists("Properties"))
-            {
                 Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
-            }
             if (!System.IO.File.Exists("Properties\\set.txt"))
             {
-                using var file = System.IO.File.CreateText("Properties\\set.txt");
-                using StreamWriter sw = new StreamWriter("Properties\\set.txt");
+                var file = System.IO.File.CreateText("Properties\\set.txt");
+                file.Close();
+                StreamWriter sw = new StreamWriter("Properties\\set.txt");
                 sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]"); // что будет в документе
                 Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
+                sw.Close();
                 Console.ReadLine();
             }
         } // создаёт документ
@@ -69,21 +31,32 @@ namespace tgbot1
         protected void Replase_Props()
         {
             if (!System.IO.File.Exists("Properties\\set.txt"))
-            {
                 return;
-            }
             System.IO.File.Delete("Properties\\set.txt");
             Create_props();
         } // перезаписывает
 
-        protected string Get_props(int i, char[] chars)
+        public string Get_props(int i, string lastname)
         {
-            string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-            string props;
-            props = file[i];
-            props = props.TrimStart(chars); // удаляет 1 слово
-            props = props.Trim(new char[] { ' ', '[', ']' }); // защита от дибила
-            return props;
+            try
+            {
+                char[] chars = lastname.ToCharArray();
+                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
+                string props = file[i];
+                props = props.TrimStart(chars); // удаляет 1 слово
+                props = props.Trim(new char[] { ' ', ':', ' ', '[', ']' }); // защита от дибила
+                if (lastname == "Token" && !(props.Length == 46)) // мало букв
+                {
+                    Console.WriteLine("Не коректные данные");
+                    Replase_Props();
+                }
+                return props;
+            }
+            catch (Exception)
+            {
+                Exception();
+                throw;
+            }
         }
 
         protected void Exception()
@@ -92,13 +65,14 @@ namespace tgbot1
             Replase_Props();
             Create_props();
         }
-    }  // абстрактный класс получения настроек
+    } // класс получения настроек
 
-    class Tgbot
+    class Tgbot : ALO_Props
     {
         static void Main(string[] args)
         {
-            new ALO_bot(new Alo_BotToken().Get_props(), new Alo_BotName().Get_props()); // создаём класс ALO_bot и в конструктор добовляем токен и имя
+            var Alo_props = new ALO_Props();
+            new ALO_bot(Alo_props.Get_props(0, "Token"), Alo_props.Get_props(1, "BotName")); // создаём класс ALO_bot и в конструктор добовляем токен и имя
         }
     } // Main
 
@@ -143,7 +117,7 @@ namespace tgbot1
                     await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
                     return;
                 }
-                await botClient.SendTextMessageAsync(message.Chat, "чё ты высрал");
+                await botClient.SendTextMessageAsync(message.Chat, "чё ты высрал?");
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
