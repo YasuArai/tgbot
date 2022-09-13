@@ -1,13 +1,6 @@
-﻿using Microsoft.VisualBasic;
-using System;
+﻿using Newtonsoft.Json.Linq;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
-using System.Globalization;
-using System.IO;
 using System.Management;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Runtime.InteropServices;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -17,18 +10,13 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace tgbot1
 {
-    class Alo_token : ALO_Props
+    class Alo_BotToken : ALO_Props
     {
-        public override string Get_props()
+        public string Get_props()
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-                string token;
-                token = file[0];
-                token = token.TrimStart('T', 'o', 'k', 'e', 'n', ' ', ':', ' '); // удаляет 1 слово
-                token = token.Trim(new Char[] { ' ', '[', ']' }); // защита от дибила
-
+                string token = Get_props(0, new char[] { 'T', 'o', 'k', 'e', 'n', ':', ' ' });
                 if (!(token.Length == 46)) // мало букв
                 {
                     Console.WriteLine("Не коректные данные");
@@ -38,9 +26,7 @@ namespace tgbot1
             }
             catch (Exception)
             {
-                Console.WriteLine("Не коректные данные");
-                Replase_Props();
-                Create_props();
+                Exception();
                 throw;
             }
         }
@@ -48,28 +34,21 @@ namespace tgbot1
 
     class Alo_BotName : ALO_Props
     {
-        public override string Get_props()
+        public string Get_props()
         {
             try
             {
-                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-                string name;
-                name = file[1];
-                name = name.TrimStart('B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' '); // удаляет 1 слово
-                name = name.Trim(new Char[] { ' ', '[', ']' }); // защита от дибила
-                return name;
+                return Get_props(1, new char[] { 'B', 'o', 't', 'N', 'a', 'm', 'e', ':', ' ' });
             }
             catch (Exception)
             {
-                Console.WriteLine("Не коректные данные");
-                Replase_Props();
-                Create_props();
+                Exception();
                 throw;
             }
         }
     }
 
-    abstract class ALO_Props
+    class ALO_Props
     {
         protected void Create_props()
         {
@@ -79,11 +58,9 @@ namespace tgbot1
             }
             if (!System.IO.File.Exists("Properties\\set.txt"))
             {
-                var file = System.IO.File.CreateText("Properties\\set.txt");
-                file.Close();
-                StreamWriter sw = new StreamWriter("Properties\\set.txt");
+                using var file = System.IO.File.CreateText("Properties\\set.txt");
+                using StreamWriter sw = new StreamWriter("Properties\\set.txt");
                 sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]"); // что будет в документе
-                sw.Close();
                 Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
                 Console.ReadLine();
             }
@@ -99,14 +76,29 @@ namespace tgbot1
             Create_props();
         } // перезаписывает
 
-        public abstract string Get_props();
+        protected string Get_props(int i, char[] chars)
+        {
+            string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
+            string props;
+            props = file[i];
+            props = props.TrimStart(chars); // удаляет 1 слово
+            props = props.Trim(new char[] { ' ', '[', ']' }); // защита от дибила
+            return props;
+        }
+
+        protected void Exception()
+        {
+            Console.WriteLine("Не коректные данные");
+            Replase_Props();
+            Create_props();
+        }
     }  // абстрактный класс получения настроек
 
     class Tgbot
     {
         static void Main(string[] args)
         {
-            new ALO_bot(new Alo_token().Get_props(), new Alo_BotName().Get_props()); // создаём класс ALO_bot и в конструктор добовляем токен и имя
+            new ALO_bot(new Alo_BotToken().Get_props(), new Alo_BotName().Get_props()); // создаём класс ALO_bot и в конструктор добовляем токен и имя
         }
     } // Main
 
@@ -123,13 +115,14 @@ namespace tgbot1
             BotToken = Token;
             BotName = Name;
             botClient = new TelegramBotClient(Token);
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
             var receiverOptions = new ReceiverOptions
             {
                 AllowedUpdates = { }, // receive all update types
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
+            Console.WriteLine("бот работает");
             Console.ReadLine();
         } // конструктор класа где всё вызывается и задоётся при создании класса
 
@@ -146,14 +139,11 @@ namespace tgbot1
                 }
                 if (message.Text?.ToLower() == "/сисинфо")
                 {
-#pragma warning disable CS4014
-                    botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
-#pragma warning restore CS4014
+                    await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
                     await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
                     return;
                 }
-
-              //  await botClient.SendTextMessageAsync(message.Chat, "Привет-привет!!");
+                await botClient.SendTextMessageAsync(message.Chat, "чё ты высрал");
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
@@ -165,8 +155,8 @@ namespace tgbot1
 
         private static string SiseInfo() // метод сис инфо
         {
-            Process process = Process.GetCurrentProcess();
-            PerformanceCounter mem = new PerformanceCounter("Memory", "Available MBytes");
+            using Process process = Process.GetCurrentProcess();
+            using PerformanceCounter mem = new PerformanceCounter("Memory", "Available MBytes");
             return $"Информация о боте"
                    + $"\nИмя: {BotName}"
                    + $"\nВерсия: {BotVersion}"
@@ -175,15 +165,13 @@ namespace tgbot1
                    + $"\nИмя Хоста: {Environment.MachineName}"
                    + $"\nПроц Хоста: {GetHardwareInfo("Win32_Processor", "Name")[0]}"
                    + $"\nКол-во свободной оперативной памяти: {mem.NextValue()} MB"
-                   + $"\nКол-во оперативной памяти занимаемой ботом: {Math.Ceiling((double)(process.PrivateMemorySize64/1024/1024))} MB";
+                   + $"\nКол-во оперативной памяти занимаемой ботом: {process.PrivateMemorySize64 / 1024 / 1024} MB";
         }
 
         static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
         {
             List<string> result = new List<string>();
-
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM " + WIN32_Class);
-
+            using ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM " + WIN32_Class);
             try
             {
                 foreach (ManagementObject obj in searcher.Get())
@@ -195,23 +183,18 @@ namespace tgbot1
             {
                 Console.WriteLine(ex.Message);
             }
-
             return result;
         } // получение проца
 
         private static string getOSInfo()
         {
-            //Get Operating system information.
             OperatingSystem os = Environment.OSVersion;
-            //Get version information about the os.
             Version vs = os.Version;
 
-            //Variable to hold our return value
             string operatingSystem = "";
 
             if (os.Platform == PlatformID.Win32Windows)
             {
-                //This is a pre-NT version of Windows
                 switch (vs.Minor)
                 {
                     case 0:
@@ -263,23 +246,14 @@ namespace tgbot1
                         break;
                 }
             }
-            //Make sure we actually got something in our OS check
-            //We don't want to just return " Service Pack 2" or " 32-bit"
-            //That information is useless without the OS version.
             if (operatingSystem != "")
             {
-                //Got something.  Let's prepend "Windows" and get more info.
                 operatingSystem = "Windows " + operatingSystem;
-                //See if there's a service pack installed.
                 if (os.ServicePack != "")
                 {
-                    //Append it to the OS name.  i.e. "Windows XP Service Pack 3"
                     operatingSystem += " " + os.ServicePack;
                 }
-                //Append the OS architecture.  i.e. "Windows XP Service Pack 3 32-bit"
-                //operatingSystem += " " + getOSArchitecture().ToString() + "-bit";
             }
-            //Return the information we've gathered.
             return operatingSystem;
         } // получение винды
     } // это база
