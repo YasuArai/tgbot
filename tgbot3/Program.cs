@@ -74,14 +74,14 @@ namespace tgbot1
             var Alo_props = new ALO_Props();
             new ALO_bot(Alo_props.Get_props(0, "Token"), Alo_props.Get_props(1, "BotName")); // создаём класс ALO_bot и в конструктор добовляем токен и имя
         }
-    } // Main
+    } // Main тут методы не создавать
 
     class ALO_bot
     {
         static TelegramBotClient botClient;
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.0.6-alpha"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.2-alpha"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
 
         public static List<string[]> cr = new List<string[]>();
@@ -98,11 +98,14 @@ namespace tgbot1
                 AllowedUpdates = { }, // receive all update types
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
-            for (int i = 0; i < System.IO.File.ReadAllLines("Properties\\base.txt").Length; i++)
+            if (System.IO.File.Exists("Properties\\base.txt"))
             {
-                if (i % 2 == 0)
+                for (int i = 0; i < System.IO.File.ReadAllLines("Properties\\base.txt").Length; i++)
                 {
-                    cr.Add(Get_props(i));
+                    if (i % 2 == 0)
+                    {
+                        cr.Add(Get_props(i));
+                    }
                 }
             }
             Console.WriteLine("бот работает");
@@ -126,23 +129,25 @@ namespace tgbot1
                     await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
                     return;
                 }
+                for (int i = 0; i < cr.Count; i++)
+                {
+                    if (message.Text?.ToLower() == cr[i][0])
+                    {
+                        await botClient.SendTextMessageAsync(message.Chat, cr[i][1]);
+                        return;
+                    }
+                }
                 if (message.Text?.Length >= 10)
                 {
                     if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                     {
                         Creply_sm(message.Text.ToLower());
-                        await botClient.SendTextMessageAsync(message.Chat, "команда создана");
+                        new SaveB(cr);
+                        await botClient.SendTextMessageAsync(message.Chat, "команда создана. требуется перезапуск бота");
                         return;
                     }
                     return;
                 }
-                if (message.Text?.ToLower() == "/savebase")
-                {
-                    new SaveB(cr);
-                    await botClient.SendTextMessageAsync(message.Chat, "база сохранена");
-                    return;
-                }
-                await botClient.SendTextMessageAsync(message.Chat, "чё ты высрал?");
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
@@ -263,56 +268,57 @@ namespace tgbot1
             cr.Add(creplym);
         }
 
-        private static string[] Get_props(int i)
+        private string[] Get_props(int i)
         {
             string[] file = System.IO.File.ReadAllLines("Properties\\base.txt");
             string[] props = new string[2];
             props[0] = file[i];
             props[1] = file[i + 1];
             return props;
-        } // это база
-
-        class SaveB
-        {
-            private List<string[]> cr = new List<string[]>();
-
-            public SaveB(List<string[]> cr)
-            {
-                this.cr = cr;
-                if (!System.IO.File.Exists("Properties\\base.txt"))
-                    Create_props();
-                else
-                    Replase_Props();
-            }
-
-            protected void Create_props()
-            {
-                if (!Directory.Exists("Properties"))
-                    Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
-                if (!System.IO.File.Exists("Properties\\base.txt"))
-                {
-                    var file = System.IO.File.CreateText("Properties\\base.txt");
-                    file.Close();
-                    StreamWriter sw = new StreamWriter("Properties\\base.txt");
-                    foreach (var lisrcr in cr)
-                    {
-                        sw.WriteLine($"{lisrcr[0].Trim()}\n{lisrcr[1].Trim()}"); // что будет в документе
-                    }
-                    Console.WriteLine("База данных была создана/перезаписана\nПроверте путь Properties\\base.txt");
-                    sw.Close();
-                    return;
-                }
-                return;
-            } // создаёт документ
-
-            protected void Replase_Props()
-            {
-                if (!System.IO.File.Exists("Properties\\base.txt"))
-                    return;
-                System.IO.File.Delete("Properties\\base.txt");
-                Create_props();
-            } // перезаписывает
-
         }
+
+    }// это база
+
+    class SaveB
+    {
+        private List<string[]> cr = new List<string[]>();
+
+        public SaveB(List<string[]> cr)
+        {
+            this.cr = cr;
+            if (!System.IO.File.Exists("Properties\\base.txt"))
+                Create_props();
+            else
+                Replase_Props();
+        }
+
+        protected void Create_props()
+        {
+            if (!Directory.Exists("Properties"))
+                Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
+            if (!System.IO.File.Exists("Properties\\base.txt"))
+            {
+                var file = System.IO.File.CreateText("Properties\\base.txt");
+                file.Close();
+                StreamWriter sw = new StreamWriter("Properties\\base.txt");
+                foreach (var lisrcr in cr)
+                {
+                    sw.WriteLine($"{lisrcr[0].Trim()}\n{lisrcr[1].Trim()}"); // что будет в документе
+                }
+                Console.WriteLine("База данных была создана/перезаписана\nПроверте путь Properties\\base.txt");
+                sw.Close();
+                return;
+            }
+            return;
+        } // создаёт документ
+
+        protected void Replase_Props()
+        {
+            if (!System.IO.File.Exists("Properties\\base.txt"))
+                return;
+            System.IO.File.Delete("Properties\\base.txt");
+            Create_props();
+        } // перезаписывает
+
     }
 }
