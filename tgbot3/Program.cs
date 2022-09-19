@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Diagnostics;
 using System.Management;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -79,12 +82,11 @@ namespace tgbot1
     class ALO_bot
     {
         static TelegramBotClient botClient;
+
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string BotName { get; private set; } // тута лежит имя если нада можно взять
         public static string BotVersion { get; } = "0.0.2.2-alpha"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
-
-        public static List<string[]> cr = new List<string[]>();
 
         public ALO_bot(string Token, string Name)
         {
@@ -98,16 +100,6 @@ namespace tgbot1
                 AllowedUpdates = { }, // receive all update types
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
-            if (System.IO.File.Exists("Properties\\base.txt"))
-            {
-                for (int i = 0; i < System.IO.File.ReadAllLines("Properties\\base.txt").Length; i++)
-                {
-                    if (i % 2 == 0)
-                    {
-                        cr.Add(Get_props(i));
-                    }
-                }
-            }
             Console.WriteLine("бот работает");
             Console.ReadLine();
         } // конструктор класа где всё вызывается и задоётся при создании класса
@@ -115,39 +107,9 @@ namespace tgbot1
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Некоторые действия
-            if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
+            if (update.Type == UpdateType.Message)
             {
-                var message = update.Message;
-                if (message.Text?.ToLower() == "/start")
-                {
-                    await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/сисинфо\n/creply-sm\n/savebas");
-                    return;
-                }
-                if (message.Text?.ToLower() == "/сисинфо")
-                {
-                    await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
-                    await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
-                    return;
-                }
-                for (int i = 0; i < cr.Count; i++)
-                {
-                    if (message.Text?.ToLower() == cr[i][0])
-                    {
-                        await botClient.SendTextMessageAsync(message.Chat, cr[i][1]);
-                        return;
-                    }
-                }
-                if (message.Text?.Length >= 10)
-                {
-                    if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
-                    {
-                        Creply_sm(message.Text.ToLower());
-                        new SaveB(cr);
-                        await botClient.SendTextMessageAsync(message.Chat, "команда создана. требуется перезапуск бота");
-                        return;
-                    }
-                    return;
-                }
+                Comand(update);
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
@@ -157,7 +119,49 @@ namespace tgbot1
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }// не трож, оно тебя сожрёт!!!
 
-        private static string SiseInfo() // метод сис инфо
+        public static async void Comand(Update update)
+        {
+            var message = update.Message;
+            try
+            {
+                if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
+                {
+                    Creply_sm(message.Text.ToLower());
+                    await botClient.SendTextMessageAsync(message.Chat, "команда создана");
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            if (message.Text?.ToLower() == "/start")
+            {
+                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/sisinfo");
+                return;
+            }
+            if (message.Text?.ToLower() == "/sisinfo")
+            {
+                await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
+                await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
+                return;
+            }
+            else
+            {
+                return;
+            }
+        } // тута все команды
+
+        private static void Creply_sm(string creply)
+        {
+            Console.WriteLine("1");
+            creply = creply.Substring(10);
+            string[] creplym = creply.Split('\n');
+            creplym[0].Trim();
+            creplym[1].Trim();
+            new ALO_BD(creplym[0], creplym[1]);
+        }
+
+        private static string SiseInfo()
         {
             using Process process = Process.GetCurrentProcess();
             using PerformanceCounter mem = new PerformanceCounter("Memory", "Available MBytes");
@@ -170,7 +174,7 @@ namespace tgbot1
                    + $"\nПроц Хоста: {GetHardwareInfo("Win32_Processor", "Name")[0]}"
                    + $"\nКол-во свободной оперативной памяти: {mem.NextValue()} MB"
                    + $"\nКол-во оперативной памяти занимаемой ботом: {process.PrivateMemorySize64 / 1024 / 1024} MB";
-        }
+        } // метод сис инфо
 
         static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
         {
@@ -261,64 +265,30 @@ namespace tgbot1
             return operatingSystem;
         } // получение винды
 
-        private static void Creply_sm(string creply)
-        {
-            creply = creply.Substring(10);
-            string[] creplym = creply.Split('\n');
-            cr.Add(creplym);
-        }
-
-        private string[] Get_props(int i)
-        {
-            string[] file = System.IO.File.ReadAllLines("Properties\\base.txt");
-            string[] props = new string[2];
-            props[0] = file[i];
-            props[1] = file[i + 1];
-            return props;
-        }
-
     }// это база
 
-    class SaveB
+    class BD
     {
-        private List<string[]> cr = new List<string[]>();
+        public string Cr_qu { get; private set; }
+        public string Cr_ans { get; private set; }
 
-        public SaveB(List<string[]> cr)
+        public BD(string Cr_qu, string Cr_ans)
         {
-            this.cr = cr;
-            if (!System.IO.File.Exists("Properties\\base.txt"))
-                Create_props();
-            else
-                Replase_Props();
+            this.Cr_qu = Cr_qu;
+            this.Cr_ans = Cr_ans;
+            Console.WriteLine("2");
         }
-
-        protected void Create_props()
+    }
+    class ALO_BD
+    {
+        public ALO_BD(string qu, string ans)
         {
-            if (!Directory.Exists("Properties"))
-                Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
-            if (!System.IO.File.Exists("Properties\\base.txt"))
+            using (FileStream fs = new FileStream("Cr.json", FileMode.OpenOrCreate))
             {
-                var file = System.IO.File.CreateText("Properties\\base.txt");
-                file.Close();
-                StreamWriter sw = new StreamWriter("Properties\\base.txt");
-                foreach (var lisrcr in cr)
-                {
-                    sw.WriteLine($"{lisrcr[0].Trim()}\n{lisrcr[1].Trim()}"); // что будет в документе
-                }
-                Console.WriteLine("База данных была создана/перезаписана\nПроверте путь Properties\\base.txt");
-                sw.Close();
-                return;
+                BD? bD = new BD(qu, ans);
+                JsonSerializer.SerializeAsync<BD>(fs, bD);
+                Console.WriteLine("3");
             }
-            return;
-        } // создаёт документ
-
-        protected void Replase_Props()
-        {
-            if (!System.IO.File.Exists("Properties\\base.txt"))
-                return;
-            System.IO.File.Delete("Properties\\base.txt");
-            Create_props();
-        } // перезаписывает
-
+        }
     }
 }
