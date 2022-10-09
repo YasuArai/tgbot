@@ -1,18 +1,15 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Management;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Xml;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace tgbot1
 {
+    enum BD_mod { GET, SET }
+    enum BD_Type { QU }
     class ALO_Props
     {
         protected void Create_props()
@@ -82,6 +79,7 @@ namespace tgbot1
     class ALO_bot
     {
         static TelegramBotClient botClient;
+        static BD bD = new BD();
 
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string BotName { get; private set; } // тута лежит имя если нада можно взять
@@ -109,7 +107,9 @@ namespace tgbot1
             // Некоторые действия
             if (update.Type == UpdateType.Message)
             {
-                Comand(update);
+                var message = update.Message;
+                Comand(message);
+                Answers(message);
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
@@ -119,15 +119,14 @@ namespace tgbot1
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }// не трож, оно тебя сожрёт!!!
 
-        public static async void Comand(Update update)
+        public static async void Comand(Message message)
         {
-            var message = update.Message;
             try
             {
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                 {
                     Creply_sm(message.Text.ToLower());
-                    await botClient.SendTextMessageAsync(message.Chat, "команда создана");
+                    await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true);
                     return;
                 }
             }
@@ -136,13 +135,13 @@ namespace tgbot1
             }
             if (message.Text?.ToLower() == "/start")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/sisinfo");
+                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/sisinfo\n/creply-sm", disableNotification: true);
                 return;
             }
             if (message.Text?.ToLower() == "/sisinfo")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: false);
-                await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: false);
+                await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: true);
+                await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                 return;
             }
             else
@@ -150,15 +149,22 @@ namespace tgbot1
                 return;
             }
         } // тута все команды
+        public static async void Answers(Message message)
+        {
+            string? a = bD.BD_Initialize("creply", message.Text?.ToLower());
+            if (a != null)
+            {
+                await botClient.SendTextMessageAsync(chatId: message.Chat,text: a);
+            }
+        }
 
         private static void Creply_sm(string creply)
         {
-            Console.WriteLine("1");
             creply = creply.Substring(10);
             string[] creplym = creply.Split('\n');
-            creplym[0].Trim();
-            creplym[1].Trim();
-            new ALO_BD(creplym[0], creplym[1]);
+            creplym[0] = creplym[0].Trim();
+            creplym[1] = creplym[1].Trim();
+            bD.BD_Initialize(nameof(creply), creplym);
         }
 
         private static string SiseInfo()
@@ -269,26 +275,38 @@ namespace tgbot1
 
     class BD
     {
-        public string Cr_qu { get; private set; }
-        public string Cr_ans { get; private set; }
-
-        public BD(string Cr_qu, string Cr_ans)
+        public void BD_Initialize(string type, string[] Cr_qu)
         {
-            this.Cr_qu = Cr_qu;
-            this.Cr_ans = Cr_ans;
-            Console.WriteLine("2");
+            XmlDocument memory_doc = new XmlDocument();
+            memory_doc.Load($"{type}_memory.xml");
+            XmlElement? memory_el = memory_doc.DocumentElement;
+            XmlElement quElem = memory_doc.CreateElement("qu");
+            XmlAttribute nameAttr = memory_doc.CreateAttribute("name");
+            XmlElement ansElem = memory_doc.CreateElement("ans");
+            XmlText nameText = memory_doc.CreateTextNode(Cr_qu[0]);
+            XmlText ansText = memory_doc.CreateTextNode(Cr_qu[1]);
+            nameAttr.AppendChild(nameText);
+            ansElem.AppendChild(ansText);
+            quElem.Attributes.Append(nameAttr);
+            quElem.AppendChild(ansElem);
+            memory_el?.AppendChild(quElem);
+            memory_doc.Save($"{type}_memory.xml");
         }
-    }
-    class ALO_BD
-    {
-        public ALO_BD(string qu, string ans)
+        public string BD_Initialize(string type, string? qu)
         {
-            using (FileStream fs = new FileStream("Cr.json", FileMode.OpenOrCreate))
+            XmlDocument memory_doc = new XmlDocument();
+            memory_doc.Load($"{type}_memory.xml");
+            XmlElement? memory_el = memory_doc.DocumentElement;
+            if (memory_el != null)
             {
-                BD? bD = new BD(qu, ans);
-                JsonSerializer.SerializeAsync<BD>(fs, bD);
-                Console.WriteLine("3");
+                foreach (XmlElement xnode in memory_el)
+                {
+                    XmlNode? attr = xnode.Attributes.GetNamedItem("name");
+                    if (attr.InnerText == qu)
+                        return xnode.FirstChild.InnerText;
+                }
             }
-        }
+            return null;
+        } // работает
     }
 }
