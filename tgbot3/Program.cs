@@ -8,8 +8,6 @@ using Telegram.Bot.Types.Enums;
 
 namespace tgbot1
 {
-    enum BD_mod { GET, SET }
-    enum BD_Type { QU }
     class ALO_Props
     {
         protected void Create_props()
@@ -83,8 +81,8 @@ namespace tgbot1
 
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.2.2-alpha"; // тута лежит версия если нада можно взять
-        public static string Infosbork { get; } = "< code > alpha, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
+        public static string BotVersion { get; } = "0.0.1.0-beta"; // тута лежит версия если нада можно взять
+        public static string Infosbork { get; } = "< code > beta, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
         {
@@ -127,6 +125,7 @@ namespace tgbot1
                 {
                     Creply_sm(message.Text.ToLower());
                     await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true);
+                    Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                     return;
                 }
             }
@@ -136,11 +135,13 @@ namespace tgbot1
             if (message.Text?.ToLower() == "/start")
             {
                 await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/sisinfo\n/creply-sm", disableNotification: true);
+                Console.WriteLine($"кто-то вызвал start в чате {message.Chat.Id}.");
                 return;
             }
             if (message.Text?.ToLower() == "/sisinfo")
             {
                 await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: true);
+                Console.WriteLine($"кто-то вызвал sisinfo в чате {message.Chat.Id}.");
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                 return;
             }
@@ -154,8 +155,11 @@ namespace tgbot1
             string? a = bD.BD_Initialize("creply", message.Text?.ToLower());
             if (a != null)
             {
-                await botClient.SendTextMessageAsync(chatId: message.Chat,text: a);
+                await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
+                Console.WriteLine($"бот ответил кому-то '{a}' на сообщение '{message.Text}' в чате {message.Chat.Id}.");
+                return;
             }
+            Console.WriteLine($"кто-то написал '{message.Text}' в чате {message.Chat.Id}.");
         }
 
         private static void Creply_sm(string creply)
