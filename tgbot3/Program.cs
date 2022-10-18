@@ -5,9 +5,12 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using File = System.IO.File;
 
 namespace tgbot1
 {
+    enum BD_mod { GET, SET }
+    enum BD_Type { Creply_Sm, Delreply_Sm }
     class ALO_Props
     {
         protected void Create_props()
@@ -81,8 +84,8 @@ namespace tgbot1
 
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.1.0-beta"; // тута лежит версия если нада можно взять
-        public static string Infosbork { get; } = "< code > beta, debug, non-release</code>"; // тута лежит инфосборк если нада можно взять
+        public static string BotVersion { get; } = "0.0.1.3-beta"; // тута лежит версия если нада можно взять
+        public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
         {
@@ -107,6 +110,7 @@ namespace tgbot1
             {
                 var message = update.Message;
                 Comand(message);
+                ForBd(message);
                 Answers(message);
             }
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
@@ -123,9 +127,18 @@ namespace tgbot1
             {
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                 {
-                    Creply_sm(message.Text.ToLower());
+                    if (cal_bd(message)) return;
+                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/creply-sm", BD_Type.Creply_Sm);
                     await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true);
                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
+                    return;
+                }
+                if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 12)) == "/delreply-sm")
+                {
+                    if (cal_bd(message)) return;
+                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-sm", BD_Type.Delreply_Sm);
+                    await botClient.SendTextMessageAsync(message.Chat, "команда удалена", disableNotification: true);
+                    Console.WriteLine($"кто-то удалил ответ в чате {message.Chat.Id}.");
                     return;
                 }
             }
@@ -134,8 +147,14 @@ namespace tgbot1
             }
             if (message.Text?.ToLower() == "/start")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/sisinfo\n/creply-sm", disableNotification: true);
+                await botClient.SendTextMessageAsync(message.Chat, "Это бот. НЕ ЧЕЛОВЕК. Чтобы понять нажмите \n/help", disableNotification: true);
                 Console.WriteLine($"кто-то вызвал start в чате {message.Chat.Id}.");
+                return;
+            }
+            if (message.Text?.ToLower() == "/help")
+            {
+                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/sisinfo\n/creply-sm\n/delreply-sm", disableNotification: true);
+                Console.WriteLine($"кто-то вызвал help в чате {message.Chat.Id}.");
                 return;
             }
             if (message.Text?.ToLower() == "/sisinfo")
@@ -145,30 +164,43 @@ namespace tgbot1
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                 return;
             }
-            else
-            {
-                return;
-            }
+            return;
         } // тута все команды
         public static async void Answers(Message message)
         {
-            string? a = bD.BD_Initialize("creply", message.Text?.ToLower());
+            Console.WriteLine($"кто-то написал '{message.Text}' в чате {message.Chat.Id}.");
+        }
+        public static async void ForBd(Message message)
+        {
+            if (message.Chat.Id.ToString().ToCharArray()[0] != '-') return;
+            string? a = bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), null, BD_mod.GET, BD_Type.Creply_Sm);
             if (a != null)
             {
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
                 Console.WriteLine($"бот ответил кому-то '{a}' на сообщение '{message.Text}' в чате {message.Chat.Id}.");
-                return;
             }
-            Console.WriteLine($"кто-то написал '{message.Text}' в чате {message.Chat.Id}.");
         }
 
-        private static void Creply_sm(string creply)
+        private static void Creply_sm(string creply, string Id, string comand, BD_Type bD_Type)
         {
-            creply = creply.Substring(10);
+            int comandL = comand.Length;
+            creply = creply.Substring(comandL);
             string[] creplym = creply.Split('\n');
-            creplym[0] = creplym[0].Trim();
-            creplym[1] = creplym[1].Trim();
-            bD.BD_Initialize(nameof(creply), creplym);
+            for (int i = 0; i < creplym.Length; i++)
+            {
+                creplym[i] = creplym[i].Trim();
+            }
+            string? a = bD.BD_Initialize(Id, null, creplym, BD_mod.SET, bD_Type);
+        }
+        private static bool cal_bd(Message message)
+        {
+            if (message.Chat.Id.ToString().ToCharArray()[0] != '-')
+            {
+                botClient.SendTextMessageAsync(chatId: message.Chat, text: "Иди нахуй! На тебя одного создавать базу данных не буду!", replyToMessageId: message.MessageId);
+                Console.WriteLine($"уёбок в чате: {message.Chat.Id}");
+                return true;
+            }
+            return false;
         }
 
         private static string SiseInfo()
@@ -279,38 +311,66 @@ namespace tgbot1
 
     class BD
     {
-        public void BD_Initialize(string type, string[] Cr_qu)
+        public string BD_Initialize(string chat_name, string? qu, string[] Cr_qu, BD_mod mod, BD_Type type)
         {
             XmlDocument memory_doc = new XmlDocument();
-            memory_doc.Load($"{type}_memory.xml");
-            XmlElement? memory_el = memory_doc.DocumentElement;
-            XmlElement quElem = memory_doc.CreateElement("qu");
-            XmlAttribute nameAttr = memory_doc.CreateAttribute("name");
-            XmlElement ansElem = memory_doc.CreateElement("ans");
-            XmlText nameText = memory_doc.CreateTextNode(Cr_qu[0]);
-            XmlText ansText = memory_doc.CreateTextNode(Cr_qu[1]);
-            nameAttr.AppendChild(nameText);
-            ansElem.AppendChild(ansText);
-            quElem.Attributes.Append(nameAttr);
-            quElem.AppendChild(ansElem);
-            memory_el?.AppendChild(quElem);
-            memory_doc.Save($"{type}_memory.xml");
-        }
-        public string BD_Initialize(string type, string? qu)
-        {
-            XmlDocument memory_doc = new XmlDocument();
-            memory_doc.Load($"{type}_memory.xml");
-            XmlElement? memory_el = memory_doc.DocumentElement;
-            if (memory_el != null)
+            if (!(File.Exists($"{chat_name}_memory.xml")))
             {
-                foreach (XmlElement xnode in memory_el)
-                {
-                    XmlNode? attr = xnode.Attributes.GetNamedItem("name");
-                    if (attr.InnerText == qu)
-                        return xnode.FirstChild.InnerText;
-                }
+                var file = System.IO.File.CreateText($"{chat_name}_memory.xml");
+                file.Close();
+                StreamWriter sw = new StreamWriter($"{chat_name}_memory.xml");
+                sw.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<creply>\r\n</creply>");
+                sw.Close();
             }
-            return null;
+            memory_doc.Load($"{chat_name}_memory.xml");
+            XmlElement? memory_el = memory_doc.DocumentElement;
+            switch (mod)
+            {
+                case BD_mod.GET:
+                    if (memory_el != null)
+                    {
+                        foreach (XmlElement xnode in memory_el)
+                        {
+                            XmlNode? attr = xnode.Attributes.GetNamedItem("name");
+                            if (attr.InnerText == qu)
+                                return xnode.FirstChild.InnerText;
+                        }
+                    }
+                    return null;
+                    break;
+                case BD_mod.SET:
+                    switch (type)
+                    {
+                        case BD_Type.Creply_Sm:
+                            XmlElement quElem = memory_doc.CreateElement("qu");
+                            XmlAttribute nameAttr = memory_doc.CreateAttribute("name");
+                            XmlElement ansElem = memory_doc.CreateElement("ans");
+                            XmlText nameText = memory_doc.CreateTextNode(Cr_qu[0]);
+                            var ansText = memory_doc.CreateTextNode(Cr_qu[1]);
+                            nameAttr.AppendChild(nameText);
+                            ansElem.AppendChild(ansText);
+                            quElem.Attributes.Append(nameAttr);
+                            quElem.AppendChild(ansElem);
+                            memory_el?.AppendChild(quElem);
+                            memory_doc.Save($"{chat_name}_memory.xml");
+                            return null;
+                            break;
+                        case BD_Type.Delreply_Sm:
+                            if (memory_el != null)
+                            {
+                                foreach (XmlElement element in memory_el)
+                                    if (element.Attributes.GetNamedItem("name")?.InnerText == Cr_qu[0]) if (element != null) memory_el?.RemoveChild(element);
+                                memory_doc.Save($"{chat_name}_memory.xml");
+                            }
+                            return null;
+                            break;
+                    }
+                    return null;
+                    break;
+                default:
+                    return null;
+                    break;
+            }
         } // работает
     }
 }
