@@ -5,7 +5,6 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using File = System.IO.File;
 
 namespace tgbot1
 {
@@ -91,6 +90,8 @@ namespace tgbot1
         {
             BotToken = Token;
             BotName = Name;
+            if (!Directory.Exists("Database"))
+                Directory.CreateDirectory("Database");
             botClient = new TelegramBotClient(Token);
             using var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -314,15 +315,15 @@ namespace tgbot1
         public string BD_Initialize(string chat_name, string? qu, string[] Cr_qu, BD_mod mod, BD_Type type)
         {
             XmlDocument memory_doc = new XmlDocument();
-            if (!(File.Exists($"{chat_name}_memory.xml")))
+            if (!(System.IO.File.Exists($"Database\\{chat_name}_memory.xml")))
             {
-                var file = System.IO.File.CreateText($"{chat_name}_memory.xml");
+                var file = System.IO.File.CreateText($"Database\\{chat_name}_memory.xml");
                 file.Close();
-                StreamWriter sw = new StreamWriter($"{chat_name}_memory.xml");
+                StreamWriter sw = new StreamWriter($"Database\\{chat_name}_memory.xml");
                 sw.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<creply>\r\n</creply>");
                 sw.Close();
             }
-            memory_doc.Load($"{chat_name}_memory.xml");
+            memory_doc.Load($"Database\\{chat_name}_memory.xml");
             XmlElement? memory_el = memory_doc.DocumentElement;
             switch (mod)
             {
@@ -352,7 +353,7 @@ namespace tgbot1
                             quElem.Attributes.Append(nameAttr);
                             quElem.AppendChild(ansElem);
                             memory_el?.AppendChild(quElem);
-                            memory_doc.Save($"{chat_name}_memory.xml");
+                            memory_doc.Save($"Database\\{chat_name}_memory.xml");
                             return null;
                             break;
                         case BD_Type.Delreply_Sm:
@@ -360,7 +361,7 @@ namespace tgbot1
                             {
                                 foreach (XmlElement element in memory_el)
                                     if (element.Attributes.GetNamedItem("name")?.InnerText == Cr_qu[0]) if (element != null) memory_el?.RemoveChild(element);
-                                memory_doc.Save($"{chat_name}_memory.xml");
+                                memory_doc.Save($"Database\\{chat_name}_memory.xml");
                             }
                             return null;
                             break;
