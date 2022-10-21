@@ -10,7 +10,7 @@ using Telegram.Bot.Types.Enums;
 namespace tgbot1
 {
     enum BD_mod { GET, SET }
-    enum BD_Comand { Creply, Delreply }
+    enum BD_Comand { Creply, Delreply, Sreply, nul }
     enum BD_Type { Sm }
     class ALO_Props
     {
@@ -85,7 +85,7 @@ namespace tgbot1
 
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.2.0-beta"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.4-beta"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
@@ -108,12 +108,7 @@ namespace tgbot1
         {
             // Некоторые действия
             if (update.Type == UpdateType.Message)
-            {
-                Message message = update.Message;
-                Comand(message);
-                ForBd(message);
-                Answers(message);
-            }
+                Comand(update.Message);
         }  // апдейт метод особо тут не кулюмай, если надо чота большое сделать выноси в метод. сис инфо в пример
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -126,6 +121,14 @@ namespace tgbot1
         {
             try
             {
+                if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 7)) == "/sreply")
+                {
+                    if (cal_bd(message)) return;
+                    var sreply = Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/sreply", BD_Comand.Sreply);
+                    await botClient.SendTextMessageAsync(message.Chat, sreply, disableNotification: true);
+                    Console.WriteLine($"кто-то посмотрел ответы в чате {message.Chat.Id}.");
+                    return;
+                }
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                 {
                     if (cal_bd(message)) return;
@@ -165,6 +168,10 @@ namespace tgbot1
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                 return;
             }
+            else
+            {
+                ForBd(message);
+            }
             return;
         } // тута все команды
         public static void Answers(Message message)
@@ -174,15 +181,19 @@ namespace tgbot1
         public static async void ForBd(Message message)
         {
             if (message.Chat.Id.ToString().ToCharArray()[0] != '-') return;
-            string? a = await bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), BD_Type.Sm);
+            string? a = await bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), BD_Comand.nul);
             if (a != null)
             {
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
                 Console.WriteLine($"бот ответил кому-то '{a}' на сообщение '{message.Text}' в чате {message.Chat.Id}.");
             }
+            else
+            {
+                Answers(message);
+            }
         }
 
-        private static void Creply_sm(string creply, string Id, string comand, BD_Comand bD_Type)
+        private static string? Creply_sm(string creply, string Id, string comand, BD_Comand bD_Comand)
         {
             int comandL = comand.Length;
             creply = creply.Substring(comandL);
@@ -191,7 +202,10 @@ namespace tgbot1
             {
                 creplym[i] = creplym[i].Trim();
             }
-            bD.BD_Initialize(Id, creplym, bD_Type, BD_Type.Sm);
+            if (bD_Comand == BD_Comand.Sreply)
+                return bD.BD_Initialize(Id, creplym[0], BD_Comand.Sreply).Result;
+            bD.BD_Initialize(Id, creplym, bD_Comand, BD_Type.Sm);
+            return null;
         }
         private static bool cal_bd(Message message)
         {
@@ -267,7 +281,7 @@ namespace tgbot1
 
     class BD
     {
-        public async Task<string?> BD_Initialize(string chat_name, string? qu, BD_Type type)
+        public async Task<string?> BD_Initialize(string chat_name, string? qu, BD_Comand comand)
         {
             string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
             string sqlExpression = "SELECT * FROM creply";
@@ -279,6 +293,16 @@ namespace tgbot1
                 {
                     if (reader.HasRows) // если есть данные
                     {
+                        if (comand == BD_Comand.Sreply)
+                        {
+                            string ret = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
+                            for (int i = 1;await reader.ReadAsync(); i++)
+                            {
+                                if (i >= 3)
+                                    ret += $"{reader[i]}";
+                            }
+                            return ret;
+                        }
                         while (await reader.ReadAsync()) // построчно считываем данные
                         {
                             if (reader[1].ToString() == chat_name & reader[2].ToString() == qu)
@@ -295,7 +319,7 @@ namespace tgbot1
         public async void BD_Initialize(string chat_name, string[]? Cr_qu, BD_Comand comand, BD_Type type)
         {
             string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
-            if (Cr_qu?.Length < 2)
+            if (Cr_qu?.Length < 2 && comand == BD_Comand.Creply)
                 return;
             switch (type)
             {
@@ -304,11 +328,10 @@ namespace tgbot1
                     switch (comand)
                     {
                         case BD_Comand.Creply:
-                            Console.WriteLine(chat_name);
-                            sqlExpression = $"INSERT INTO creply (re, q, chatId) VALUES ('{Cr_qu[1]}', '{Cr_qu[0]}', {chat_name})";
+                            sqlExpression = $"INSERT INTO creply (re, q, chatId) VALUES ('{Cr_qu?[1]}', '{Cr_qu?[0]}', {chat_name})";
                             break;
                         case BD_Comand.Delreply:
-                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q='{Cr_qu[0]}'";
+                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q='{Cr_qu?[0]}'";
                             break;
                     }
                     using (SqlConnection connection = new SqlConnection(connectionString))
