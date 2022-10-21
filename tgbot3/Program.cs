@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Win32;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Management;
-using System.Xml;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -9,7 +10,8 @@ using Telegram.Bot.Types.Enums;
 namespace tgbot1
 {
     enum BD_mod { GET, SET }
-    enum BD_Type { Creply_Sm, Delreply_Sm }
+    enum BD_Comand { Creply, Delreply }
+    enum BD_Type { Sm }
     class ALO_Props
     {
         protected void Create_props()
@@ -79,19 +81,17 @@ namespace tgbot1
     class ALO_bot
     {
         static TelegramBotClient botClient;
-        static BD bD = new BD();
+        private static BD bD = new();
 
-        public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
-        public static string BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.1.3-beta"; // тута лежит версия если нада можно взять
+        public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
+        public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.0-beta"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
         {
             BotToken = Token;
             BotName = Name;
-            if (!Directory.Exists("Database"))
-                Directory.CreateDirectory("Database");
             botClient = new TelegramBotClient(Token);
             using var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -109,7 +109,7 @@ namespace tgbot1
             // Некоторые действия
             if (update.Type == UpdateType.Message)
             {
-                var message = update.Message;
+                Message message = update.Message;
                 Comand(message);
                 ForBd(message);
                 Answers(message);
@@ -129,7 +129,7 @@ namespace tgbot1
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                 {
                     if (cal_bd(message)) return;
-                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/creply-sm", BD_Type.Creply_Sm);
+                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply);
                     await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true);
                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                     return;
@@ -137,7 +137,7 @@ namespace tgbot1
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 12)) == "/delreply-sm")
                 {
                     if (cal_bd(message)) return;
-                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-sm", BD_Type.Delreply_Sm);
+                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-sm", BD_Comand.Delreply);
                     await botClient.SendTextMessageAsync(message.Chat, "команда удалена", disableNotification: true);
                     Console.WriteLine($"кто-то удалил ответ в чате {message.Chat.Id}.");
                     return;
@@ -167,14 +167,14 @@ namespace tgbot1
             }
             return;
         } // тута все команды
-        public static async void Answers(Message message)
+        public static void Answers(Message message)
         {
             Console.WriteLine($"кто-то написал '{message.Text}' в чате {message.Chat.Id}.");
         }
         public static async void ForBd(Message message)
         {
             if (message.Chat.Id.ToString().ToCharArray()[0] != '-') return;
-            string? a = bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), null, BD_mod.GET, BD_Type.Creply_Sm);
+            string? a = await bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), BD_Type.Sm);
             if (a != null)
             {
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
@@ -182,7 +182,7 @@ namespace tgbot1
             }
         }
 
-        private static void Creply_sm(string creply, string Id, string comand, BD_Type bD_Type)
+        private static void Creply_sm(string creply, string Id, string comand, BD_Comand bD_Type)
         {
             int comandL = comand.Length;
             creply = creply.Substring(comandL);
@@ -191,7 +191,7 @@ namespace tgbot1
             {
                 creplym[i] = creplym[i].Trim();
             }
-            string? a = bD.BD_Initialize(Id, null, creplym, BD_mod.SET, bD_Type);
+            bD.BD_Initialize(Id, creplym, bD_Type, BD_Type.Sm);
         }
         private static bool cal_bd(Message message)
         {
@@ -207,7 +207,7 @@ namespace tgbot1
         private static string SiseInfo()
         {
             using Process process = Process.GetCurrentProcess();
-            using PerformanceCounter mem = new PerformanceCounter("Memory", "Available MBytes");
+            using PerformanceCounter mem = new("Memory", "Available MBytes");
             return $"Информация о боте"
                    + $"\nИмя: {BotName}"
                    + $"\nВерсия: {BotVersion}"
@@ -222,7 +222,7 @@ namespace tgbot1
         static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
         {
             List<string> result = new List<string>();
-            using ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM " + WIN32_Class);
+            using ManagementObjectSearcher searcher = new("SELECT * FROM " + WIN32_Class);
             try
             {
                 foreach (ManagementObject obj in searcher.Get())
@@ -239,139 +239,87 @@ namespace tgbot1
 
         private static string getOSInfo()
         {
-            OperatingSystem os = Environment.OSVersion;
-            Version vs = os.Version;
-
-            string operatingSystem = "";
-
-            if (os.Platform == PlatformID.Win32Windows)
             {
-                switch (vs.Minor)
+                string key = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
+                using (RegistryKey regKey = Registry.LocalMachine.OpenSubKey(key))
                 {
-                    case 0:
-                        operatingSystem = "95";
-                        break;
-                    case 10:
-                        if (vs.Revision.ToString() == "2222A")
-                            operatingSystem = "98SE";
-                        else
-                            operatingSystem = "98";
-                        break;
-                    case 90:
-                        operatingSystem = "Me";
-                        break;
-                    default:
-                        break;
+                    if (regKey != null)
+                    {
+                        try
+                        {
+                            string name = regKey.GetValue("ProductName").ToString();
+                            if (name == "") return "Значение отсутствует";
+                            else
+                                return $"{name}";
+                        }
+                        catch (Exception ex)
+                        {
+                            return ex.Message;
+                        }
+                    }
+                    else
+                        return "Не удалось получить значение ключа в реестре";
                 }
-            }
-            else if (os.Platform == PlatformID.Win32NT)
-            {
-                switch (vs.Major)
-                {
-                    case 3:
-                        operatingSystem = "NT 3.51";
-                        break;
-                    case 4:
-                        operatingSystem = "NT 4.0";
-                        break;
-                    case 5:
-                        if (vs.Minor == 0)
-                            operatingSystem = "2000";
-                        else
-                            operatingSystem = "XP";
-                        break;
-                    case 6:
-                        if (vs.Minor == 0)
-                            operatingSystem = "Vista";
-                        else if (vs.Minor == 1)
-                            operatingSystem = "7";
-                        else if (vs.Minor == 2)
-                            operatingSystem = "8";
-                        else
-                            operatingSystem = "8.1";
-                        break;
-                    case 10:
-                        operatingSystem = "10";
-                        break;
-                    default:
-                        break;
-                }
-            }
-            if (operatingSystem != "")
-            {
-                operatingSystem = "Windows " + operatingSystem;
-                if (os.ServicePack != "")
-                {
-                    operatingSystem += " " + os.ServicePack;
-                }
-            }
-            return operatingSystem;
+            } // получение винды
         } // получение винды
 
     }// это база
 
     class BD
     {
-        public string BD_Initialize(string chat_name, string? qu, string[] Cr_qu, BD_mod mod, BD_Type type)
+        public async Task<string?> BD_Initialize(string chat_name, string? qu, BD_Type type)
         {
-            XmlDocument memory_doc = new XmlDocument();
-            if (!(System.IO.File.Exists($"Database\\{chat_name}_memory.xml")))
+            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
+            string sqlExpression = "SELECT * FROM creply";
+            using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                var file = System.IO.File.CreateText($"Database\\{chat_name}_memory.xml");
-                file.Close();
-                StreamWriter sw = new StreamWriter($"Database\\{chat_name}_memory.xml");
-                sw.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<creply>\r\n</creply>");
-                sw.Close();
-            }
-            memory_doc.Load($"Database\\{chat_name}_memory.xml");
-            XmlElement? memory_el = memory_doc.DocumentElement;
-            switch (mod)
-            {
-                case BD_mod.GET:
-                    if (memory_el != null)
+                await connection.OpenAsync();
+                SqlCommand command = new SqlCommand(sqlExpression, connection);
+                using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                {
+                    if (reader.HasRows) // если есть данные
                     {
-                        foreach (XmlElement xnode in memory_el)
+                        while (await reader.ReadAsync()) // построчно считываем данные
                         {
-                            XmlNode? attr = xnode.Attributes.GetNamedItem("name");
-                            if (attr.InnerText == qu)
-                                return xnode.FirstChild.InnerText;
-                        }
-                    }
-                    return null;
-                    break;
-                case BD_mod.SET:
-                    switch (type)
-                    {
-                        case BD_Type.Creply_Sm:
-                            XmlElement quElem = memory_doc.CreateElement("qu");
-                            XmlAttribute nameAttr = memory_doc.CreateAttribute("name");
-                            XmlElement ansElem = memory_doc.CreateElement("ans");
-                            XmlText nameText = memory_doc.CreateTextNode(Cr_qu[0]);
-                            var ansText = memory_doc.CreateTextNode(Cr_qu[1]);
-                            nameAttr.AppendChild(nameText);
-                            ansElem.AppendChild(ansText);
-                            quElem.Attributes.Append(nameAttr);
-                            quElem.AppendChild(ansElem);
-                            memory_el?.AppendChild(quElem);
-                            memory_doc.Save($"Database\\{chat_name}_memory.xml");
-                            return null;
-                            break;
-                        case BD_Type.Delreply_Sm:
-                            if (memory_el != null)
+                            if (reader[1].ToString() == chat_name & reader[2].ToString() == qu)
                             {
-                                foreach (XmlElement element in memory_el)
-                                    if (element.Attributes.GetNamedItem("name")?.InnerText == Cr_qu[0]) if (element != null) memory_el?.RemoveChild(element);
-                                memory_doc.Save($"Database\\{chat_name}_memory.xml");
+                                return reader[3].ToString();
                             }
-                            return null;
-                            break;
+                        }
+                        return null;
                     }
                     return null;
-                    break;
-                default:
-                    return null;
+                }
+            }
+        }
+        public async void BD_Initialize(string chat_name, string[]? Cr_qu, BD_Comand comand, BD_Type type)
+        {
+            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
+            if (Cr_qu?.Length < 2)
+                return;
+            switch (type)
+            {
+                case BD_Type.Sm:
+                    string? sqlExpression = null;
+                    switch (comand)
+                    {
+                        case BD_Comand.Creply:
+                            Console.WriteLine(chat_name);
+                            sqlExpression = $"INSERT INTO creply (re, q, chatId) VALUES ('{Cr_qu[1]}', '{Cr_qu[0]}', {chat_name})";
+                            break;
+                        case BD_Comand.Delreply:
+                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q='{Cr_qu[0]}'";
+                            break;
+                    }
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        await connection.OpenAsync();
+                        SqlCommand command = new SqlCommand(sqlExpression, connection);
+                        int number = await command.ExecuteNonQueryAsync();
+                        Console.WriteLine($"изменено объектов: {number}");
+                    }
                     break;
             }
-        } // работает
+        }
     }
 }
