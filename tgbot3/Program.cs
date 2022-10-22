@@ -85,7 +85,7 @@ namespace tgbot1
 
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.2.4-beta"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.6-beta"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
@@ -199,9 +199,7 @@ namespace tgbot1
             creply = creply.Substring(comandL);
             string[] creplym = creply.Split('\n');
             for (int i = 0; i < creplym.Length; i++)
-            {
                 creplym[i] = creplym[i].Trim();
-            }
             if (bD_Comand == BD_Comand.Sreply)
                 return bD.BD_Initialize(Id, creplym[0], BD_Comand.Sreply).Result;
             bD.BD_Initialize(Id, creplym, bD_Comand, BD_Type.Sm);
@@ -296,10 +294,12 @@ namespace tgbot1
                         if (comand == BD_Comand.Sreply)
                         {
                             string ret = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
-                            for (int i = 1;await reader.ReadAsync(); i++)
+                            while (await reader.ReadAsync()) // построчно считываем данные
                             {
-                                if (i >= 3)
-                                    ret += $"{reader[i]}";
+                                if (reader[1].ToString() == chat_name & reader[2].ToString() == qu)
+                                {
+                                    ret += reader[3].ToString()+"\n";
+                                }
                             }
                             return ret;
                         }
