@@ -1,5 +1,5 @@
-﻿using Microsoft.Win32;
-using System.Data.SqlClient;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.Win32;
 using System.Diagnostics;
 using System.Management;
 using Telegram.Bot;
@@ -85,7 +85,7 @@ namespace tgbot1
 
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.2.6-beta"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.12-beta"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
@@ -123,15 +123,18 @@ namespace tgbot1
             {
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 7)) == "/sreply")
                 {
-                    if (cal_bd(message)) return;
                     var sreply = Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/sreply", BD_Comand.Sreply);
-                    await botClient.SendTextMessageAsync(message.Chat, sreply, disableNotification: true);
-                    Console.WriteLine($"кто-то посмотрел ответы в чате {message.Chat.Id}.");
+                    if (sreply != null)
+                    {
+                        await botClient.SendTextMessageAsync(message.Chat, sreply, disableNotification: true);
+                        Console.WriteLine($"кто-то посмотрел ответы в чате {message.Chat.Id}.");
+                        return;
+                    }
+                    await botClient.SendTextMessageAsync(message.Chat, "не найдено", disableNotification: true);
                     return;
                 }
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 10)) == "/creply-sm")
                 {
-                    if (cal_bd(message)) return;
                     Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply);
                     await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true);
                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
@@ -139,7 +142,6 @@ namespace tgbot1
                 }
                 if (message.Text?.ToLower().Substring(0, message.Text.Length - (message.Text.Length - 12)) == "/delreply-sm")
                 {
-                    if (cal_bd(message)) return;
                     Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-sm", BD_Comand.Delreply);
                     await botClient.SendTextMessageAsync(message.Chat, "команда удалена", disableNotification: true);
                     Console.WriteLine($"кто-то удалил ответ в чате {message.Chat.Id}.");
@@ -157,7 +159,7 @@ namespace tgbot1
             }
             if (message.Text?.ToLower() == "/help")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/sisinfo\n/creply-sm\n/delreply-sm", disableNotification: true);
+                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/sisinfo\n/sreply\n/creply-sm\n/delreply-sm", disableNotification: true);
                 Console.WriteLine($"кто-то вызвал help в чате {message.Chat.Id}.");
                 return;
             }
@@ -180,8 +182,8 @@ namespace tgbot1
         }
         public static async void ForBd(Message message)
         {
-            if (message.Chat.Id.ToString().ToCharArray()[0] != '-') return;
-            string? a = await bD.BD_Initialize(message.Chat.Id.ToString(), message.Text?.ToLower(), BD_Comand.nul);
+            string[]? creplym = message.Text?.ToLower().Split('\n');
+            string? a = bD.BD_Initialize(message.Chat.Id.ToString(), creplym[0], BD_Comand.nul);
             if (a != null)
             {
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
@@ -201,19 +203,9 @@ namespace tgbot1
             for (int i = 0; i < creplym.Length; i++)
                 creplym[i] = creplym[i].Trim();
             if (bD_Comand == BD_Comand.Sreply)
-                return bD.BD_Initialize(Id, creplym[0], BD_Comand.Sreply).Result;
+                return bD.BD_Initialize(Id, creplym[0], BD_Comand.Sreply);
             bD.BD_Initialize(Id, creplym, bD_Comand, BD_Type.Sm);
             return null;
-        }
-        private static bool cal_bd(Message message)
-        {
-            if (message.Chat.Id.ToString().ToCharArray()[0] != '-')
-            {
-                botClient.SendTextMessageAsync(chatId: message.Chat, text: "Иди нахуй! На тебя одного создавать базу данных не буду!", replyToMessageId: message.MessageId);
-                Console.WriteLine($"уёбок в чате: {message.Chat.Id}");
-                return true;
-            }
-            return false;
         }
 
         private static string SiseInfo()
@@ -279,66 +271,77 @@ namespace tgbot1
 
     class BD
     {
-        public async Task<string?> BD_Initialize(string chat_name, string? qu, BD_Comand comand)
+        public string? BD_Initialize(string chat_name, string? qu, BD_Comand comand)
         {
-            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
             string sqlExpression = "SELECT * FROM creply";
-            using (SqlConnection connection = new SqlConnection(connectionString))
+            using (var connection = new SqliteConnection("Data Source=memory.db"))
             {
-                await connection.OpenAsync();
-                SqlCommand command = new SqlCommand(sqlExpression, connection);
-                using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                connection.Open();
+                SqliteCommand command = new SqliteCommand(sqlExpression, connection);
+                using (SqliteDataReader reader = command.ExecuteReader())
                 {
                     if (reader.HasRows) // если есть данные
                     {
                         if (comand == BD_Comand.Sreply)
                         {
                             string ret = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
-                            while (await reader.ReadAsync()) // построчно считываем данные
+                            while (reader.Read()) // построчно считываем данные
                             {
                                 if (reader[1].ToString() == chat_name & reader[2].ToString() == qu)
                                 {
-                                    ret += reader[3].ToString()+"\n";
+                                    ret += reader[3].ToString() + "\n";
                                 }
                             }
                             return ret;
                         }
-                        while (await reader.ReadAsync()) // построчно считываем данные
+                        List<string?> strings = new List<string?>();
+                        while (reader.Read()) // построчно считываем данные
                         {
                             if (reader[1].ToString() == chat_name & reader[2].ToString() == qu)
                             {
-                                return reader[3].ToString();
+                                strings.Add(reader[3].ToString());
                             }
                         }
-                        return null;
+                        int ListLeng = strings.Count;
+                        if (ListLeng == 0) return null;
+                        Random random = new Random();
+                        int rand = random.Next(ListLeng);
+                        return strings[rand];
                     }
                     return null;
                 }
             }
         }
-        public async void BD_Initialize(string chat_name, string[]? Cr_qu, BD_Comand comand, BD_Type type)
+        public void BD_Initialize(string chat_name, string[]? Cr_qu, BD_Comand comand, BD_Type type)
         {
-            string connectionString = "Server=(localdb)\\mssqllocaldb;Database=memory;Trusted_Connection=True;";
             if (Cr_qu?.Length < 2 && comand == BD_Comand.Creply)
                 return;
             switch (type)
             {
                 case BD_Type.Sm:
                     string? sqlExpression = null;
-                    switch (comand)
+                    using (var connection = new SqliteConnection("Data Source=memory.db"))
                     {
-                        case BD_Comand.Creply:
-                            sqlExpression = $"INSERT INTO creply (re, q, chatId) VALUES ('{Cr_qu?[1]}', '{Cr_qu?[0]}', {chat_name})";
-                            break;
-                        case BD_Comand.Delreply:
-                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q='{Cr_qu?[0]}'";
-                            break;
-                    }
-                    using (SqlConnection connection = new SqlConnection(connectionString))
-                    {
-                        await connection.OpenAsync();
-                        SqlCommand command = new SqlCommand(sqlExpression, connection);
-                        int number = await command.ExecuteNonQueryAsync();
+                        connection.Open();
+                        SqliteCommand? command = null;
+                        switch (comand)
+                        {
+                            case BD_Comand.Creply:
+                                sqlExpression = $"INSERT INTO creply (re, q, chatId) VALUES (@re, @q, {chat_name})";
+                                command = new SqliteCommand(sqlExpression, connection);
+                                SqliteParameter re = new SqliteParameter("@re", Cr_qu[1]);
+                                command.Parameters.Add(re);
+                                SqliteParameter q = new SqliteParameter("@q", Cr_qu[0]);
+                                command.Parameters.Add(q);
+                                break;
+                            case BD_Comand.Delreply:
+                                sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q= @q";
+                                command = new SqliteCommand(sqlExpression, connection);
+                                SqliteParameter t = new SqliteParameter("@q", Cr_qu[0]);
+                                command.Parameters.Add(t);
+                                break;
+                        }
+                        int number = command.ExecuteNonQuery();
                         Console.WriteLine($"изменено объектов: {number}");
                     }
                     break;
