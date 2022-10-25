@@ -85,8 +85,8 @@ namespace tgbot1
 
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "0.0.2.12-beta"; // тута лежит версия если нада можно взять
-        public static string Infosbork { get; } = "beta, debug, non-release"; // тута лежит инфосборк если нада можно взять
+        public static string BotVersion { get; } = "0.0.2.13-beta"; // тута лежит версия если нада можно взять
+        public static string Infosbork { get; } = "beta, debug, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
         {
@@ -100,6 +100,8 @@ namespace tgbot1
                 AllowedUpdates = { }, // receive all update types
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
+
+            Console.WriteLine($"Название бота: {BotName}");
             Console.WriteLine("бот работает");
             Console.ReadLine();
         } // конструктор класа где всё вызывается и задоётся при создании класса
@@ -153,19 +155,19 @@ namespace tgbot1
             }
             if (message.Text?.ToLower() == "/start")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "Это бот. НЕ ЧЕЛОВЕК. Чтобы понять нажмите \n/help", disableNotification: true);
+                await botClient.SendTextMessageAsync(message.Chat, "Это бот. НЕ ЧЕЛОВЕК. Чтобы понять нажмите \n/help\nЕсли вы создадите ответ в личных сообщениях, в чате он работать НЕ БУДЕТ!!!", disableNotification: true);
                 Console.WriteLine($"кто-то вызвал start в чате {message.Chat.Id}.");
                 return;
             }
             if (message.Text?.ToLower() == "/help")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/sisinfo\n/sreply\n/creply-sm\n/delreply-sm", disableNotification: true);
+                await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/sysinfo\n/sreply\n/creply-sm\n/delreply-sm", disableNotification: true);
                 Console.WriteLine($"кто-то вызвал help в чате {message.Chat.Id}.");
                 return;
             }
-            if (message.Text?.ToLower() == "/sisinfo")
+            if (message.Text?.ToLower() == "/sysinfo")
             {
-                await botClient.SendTextMessageAsync(message.Chat, "подождите...", disableNotification: true);
+                await botClient.SendTextMessageAsync(message.Chat, "Подождите, собираю информацию о системе...", disableNotification: true);
                 Console.WriteLine($"кто-то вызвал sisinfo в чате {message.Chat.Id}.");
                 await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(), disableNotification: true);
                 return;
