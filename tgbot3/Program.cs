@@ -124,7 +124,7 @@ namespace tgbot1
 
         public static void Comand(Message message)
         {
-            string[] comands = new string[] { "/sreply", "/creply-sm", "/creply-tm", "/delreply-sm", "/delreply-tm", "/start", "/help", "/sysinfo" };
+            string[] comands = new string[] { "/sreply", "/creply-sm", "/creply-tm", "/delreply-sm", "/delreply-tm", "/start", "/help", "/botinfo" };
             if (message.Type == MessageType.Text)
                 if (message.Text?.ToCharArray()[0] == '/')
                     ForComands(message, comands, BD_Mesege.Text);
