@@ -87,7 +87,7 @@ namespace tgbot1
         private static BD bD = new();
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.0.0.1"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.0.0.4"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
@@ -393,6 +393,8 @@ namespace tgbot1
         public void BD_Initialize(string chat_name, string[] Cr_qu, BD_Comand comand, BD_Type type)
         {
             if (Cr_qu.Length < 2 && comand == BD_Comand.Creply)
+                return;
+            if (Cr_qu[0] == "" || Cr_qu[0] == " ")
                 return;
             string? sqlExpression = null;
             using (var connection = new SqliteConnection("Data Source=memory.db"))
