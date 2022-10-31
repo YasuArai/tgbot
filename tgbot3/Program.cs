@@ -85,9 +85,11 @@ namespace tgbot1
     {
         private static TelegramBotClient botClient;
         private static BD bD = new();
+        private static int num = 0;
+        private static int time = 0;
         public static string? BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.0.0.4"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.0.2.0"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name)
@@ -102,12 +104,21 @@ namespace tgbot1
                 AllowedUpdates = { }, // receive all update types
             };
             botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken);
-
+            Thread myThread = new Thread(Timer);
+            myThread.Start();
             Console.WriteLine($"Название бота: {BotName}");
             Console.WriteLine("бот работает");
             Console.ReadLine();
         } // конструктор класа где всё вызывается и задоётся при создании класса
 
+        public void Timer()
+        {
+            while (true)
+            {
+                time++;
+                Thread.Sleep(1000);
+            }
+        }
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             // Некоторые действия
@@ -147,10 +158,21 @@ namespace tgbot1
                 string? a = bD.BD_Initialize(message.Chat.Id.ToString(), creplym[0], BD_Comand.nul);
                 if (a != null)
                 {
+                    num++;
+                    if (num > 30 & time > 60)
+                    {
+                        num = time = 0;
+                        using (var stream = System.IO.File.OpenRead($"photo_memory//spam.mp3"))
+                            message = await botClient.SendVoiceAsync(chatId: message.Chat, voice: stream, duration: 36);
+                        await botClient.SendTextMessageAsync(chatId: message.Chat, text: "это ты пидрила который спамит?\nмои подсанчики тебя уже за углом ждут\nты это, прикращай по хорошему", replyToMessageId: message.MessageId);
+                        return;
+                    }
+                    if (time > 60)
+                        time = 0;
                     if (!a.EndsWith(".jpg"))
                     {
                         await botClient.SendTextMessageAsync(chatId: message.Chat, text: a, replyToMessageId: message.MessageId);
-                        Console.WriteLine($"бот ответил кому-то '{a}' на сообщение '{message.Text}' в чате {message.Chat.Id}.");
+                        Console.WriteLine($"бот ответил кому-то '{a}' на сообщение '{message.Text}' в чате {message.Chat.Id} time: {time} num: {num}.");
                     }
                     else
                     {
@@ -185,23 +207,23 @@ namespace tgbot1
                                     await botClient.SendTextMessageAsync(message.Chat, "не найдено", disableNotification: true);
                                     return;
                                 case "/creply-sm":
-                                    Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Text, null);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? a = Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Text, null);
+                                    await botClient.SendTextMessageAsync(message.Chat, a ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                                     return;
                                 case "/creply-tm":
-                                    Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Text, null);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? b = Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Text, null);
+                                    await botClient.SendTextMessageAsync(message.Chat, b ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                                     return;
                                 case "/delreply-sm":
-                                    Creply_sm(message.Text, message.Chat.Id.ToString(), "/delreply-sm", BD_Comand.Delreply, BD_Type.Sm, BD_Mesege.Text, null);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда удалена(если конечно она была)", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? c = Creply_sm(message.Text, message.Chat.Id.ToString(), "/delreply-sm", BD_Comand.Delreply, BD_Type.Sm, BD_Mesege.Text, null);
+                                    await botClient.SendTextMessageAsync(message.Chat, c ?? "команда не удалена\nпоходу её нет", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то удалил ответ в чате {message.Chat.Id}.");
                                     return;
                                 case "/delreply-tm":
-                                    Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-tm", BD_Comand.Delreply, BD_Type.Tm, BD_Mesege.Text, null);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда удалена(если конечно она была)", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? d = Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-tm", BD_Comand.Delreply, BD_Type.Tm, BD_Mesege.Text, null);
+                                    await botClient.SendTextMessageAsync(message.Chat, d ?? "команда не удалена\nпоходу её нет", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то удалил ответ в чате {message.Chat.Id}.");
                                     return;
                                 case "/start":
@@ -225,14 +247,14 @@ namespace tgbot1
                             {
                                 case "/creply-sm":
                                     string filename1 = SavePhotoAsync(message).Result;
-                                    Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Photo, filename1);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? a = Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Photo, filename1);
+                                    await botClient.SendTextMessageAsync(message.Chat, a ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                                     return;
                                 case "/creply-tm":
                                     string filename2 = SavePhotoAsync(message).Result;
-                                    Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Photo, filename2);
-                                    await botClient.SendTextMessageAsync(message.Chat, "команда создана", disableNotification: true, replyToMessageId: message.MessageId);
+                                    string? b = Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Photo, filename2);
+                                    await botClient.SendTextMessageAsync(message.Chat, b ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
                                     Console.WriteLine($"кто-то создал ответ в чате {message.Chat.Id}.");
                                     return;
                             }
@@ -252,7 +274,20 @@ namespace tgbot1
             }
             if (bD_Mesege == BD_Mesege.Photo)
             {
-                creplym = creply.Split('\n');
+                string[] crepym = creply.Split('\n');
+                if (creplym.Length == 1)
+                {
+                    creplym = new string[2];
+                    creplym[0] = crepym[0];
+                    creplym[1] = "";
+                }
+                else if (creplym.Length == 2)
+                {
+                    creplym = new string[3];
+                    creplym[0] = crepym[0];
+                    creplym[1] = "";
+                    creplym[2] = crepym[1];
+                }
                 creplym[0].ToLower();
                 for (int i = 0; i < creplym.Length; i++)
                     if (i != 1)
@@ -262,8 +297,7 @@ namespace tgbot1
             }
             if (bD_Comand == BD_Comand.Sreply)
                 return bD.BD_Initialize(Id, creplym[0], BD_Comand.Sreply);
-            bD.BD_Initialize(Id, creplym, bD_Comand, bD_Type);
-            return null;
+            return bD.BD_Initialize(Id, creplym, bD_Comand, bD_Type);
         }
         private static async Task<string> SavePhotoAsync(Message message)
         {
@@ -377,7 +411,7 @@ namespace tgbot1
                             Regex wordFilter = new Regex($"{reader[2]}");
                             if (reader[1].ToString() == chat_name && reader[2].ToString() == qu && reader[4].ToString() == "Sm")
                                 strings.Add(reader[3].ToString());
-                            else if (wordFilter.IsMatch(qu) && reader[4].ToString() == "Tm")
+                            else if (reader[1].ToString() == chat_name && wordFilter.IsMatch(qu) && reader[4].ToString() == "Tm")
                                 strings.Add(reader[3].ToString());
                         }
                         int ListLeng = strings.Count;
@@ -390,12 +424,14 @@ namespace tgbot1
                 }
             }
         }
-        public void BD_Initialize(string chat_name, string[] Cr_qu, BD_Comand comand, BD_Type type)
+        public string? BD_Initialize(string chat_name, string[] Cr_qu, BD_Comand comand, BD_Type type)
         {
             if (Cr_qu.Length < 2 && comand == BD_Comand.Creply)
-                return;
+                return null;
             if (Cr_qu[0] == "" || Cr_qu[0] == " ")
-                return;
+                return null;
+            if (type == BD_Type.Tm && Cr_qu[0].Length < 3)
+                return null;
             string? sqlExpression = null;
             using (var connection = new SqliteConnection("Data Source=memory.db"))
             {
@@ -434,6 +470,13 @@ namespace tgbot1
                 }
                 int number = command.ExecuteNonQuery();
                 Console.WriteLine($"изменено объектов: {number}");
+                if (number == 0)
+                    return null;
+                if (comand == BD_Comand.Creply)
+                    return "команда создана";
+                else if (comand == BD_Comand.Delreply)
+                    return "команда удалена";
+                return null;
             }
         }
     }
