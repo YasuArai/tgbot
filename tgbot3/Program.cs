@@ -93,7 +93,7 @@ namespace tgbot1
         public static int CringeRand { get; private set; }
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.1.2.1"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.1.3.0"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name, int Cringe)
@@ -105,7 +105,8 @@ namespace tgbot1
             Thread myThread = new Thread(new ThreadStart(Timer));
             Console.WriteLine($"Название бота: {BotName}");
             Console.WriteLine("бот работает");
-            Console.ReadLine();
+            while (true)
+                Consosmesege();
         } // конструктор класа где всё вызывается и задоётся при создании класса
         public static void Start_bot()
         {
@@ -125,6 +126,21 @@ namespace tgbot1
                 Timemesege++;
                 UpTime++;
                 Thread.Sleep(1000);
+            }
+        }
+        public async void Consosmesege()
+        {
+            try
+            {
+                string[] strm = Console.ReadLine().Split(" ");
+                string str = "";
+                for (int i = 1; i < strm.Length; i++)
+                    str += strm[i] + " ";
+                await botClient.SendTextMessageAsync(chatId: strm[0], text: "CONSOLE: " + str);
+            }
+            catch
+            {
+                Console.WriteLine("чот не так");
             }
         }
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
