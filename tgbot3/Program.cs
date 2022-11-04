@@ -89,11 +89,11 @@ namespace tgbot1
         public static int Nummesege { get; private set; }
         public static int NumCringe { get; private set; }
         public static int Timemesege { get; private set; }
-        public static int UpTime { get; private set; }
+        public static long UpTime { get; private set; }
         public static int CringeRand { get; private set; }
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.1.1.3"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.1.1.6"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name, int Cringe)
@@ -147,20 +147,24 @@ namespace tgbot1
 
         public static void Comand(Message message)
         {
-            string[] comands = new string[] { "/sreply", "/creply-sm", "/creply-tm", "/delreply-sm", "/delreply-tm", "/start", "/help", "/botinfo", "/cringe" };
+            string[] comands = new string[] { "/sreply", "/creply-sm", "/creply-tm", "/delreply-sm", "/delreply-tm", "/start", "/help", "/botinfo", "/chatid", "/cringe" };
+            string? Username = message.From?.FirstName;
+            if (Username == null) Username = "кто-то";
+            string? Chat_Name = message.Chat.Username;
+            if (Chat_Name == null) Chat_Name = message.Chat.Id.ToString();
             if (message.Type == MessageType.Text)
                 if (message.Text?.ToCharArray()[0] == '/')
-                    ForComands(message, comands, BD_Mesege.Text);
+                    ForComands(message, comands, BD_Mesege.Text, Username, Chat_Name);
                 else
-                    ForBd(message);
+                    ForBd(message, Username, Chat_Name);
             else if (message.Type == MessageType.Photo)
                 if (message.Caption?.ToCharArray()[0] == '/')
-                    ForComands(message, comands, BD_Mesege.Photo);
+                    ForComands(message, comands, BD_Mesege.Photo, Username, Chat_Name);
             return;
         } // тута все команды
-        public static void Answers(Message message)
+        public static void Answers(Message message,string Username,string Chat_Name)
         {
-            Console.WriteLine($"'{message.Chat.Username}' написал '{message.Text}' в чате '{message.Chat.FirstName}'.");
+            Console.WriteLine($"'{Username}' написал '{message.Text}' в чате '{Chat_Name}'.");
         }
         public static async Task<bool> BezSpama(Message message)
         {
@@ -213,7 +217,7 @@ namespace tgbot1
                 RandomImage(message, crige);
             }
         }
-        public static async void ForBd(Message message)
+        public static async void ForBd(Message message, string Username, string Chat_Name)
         {
             if (message.Text != null)
             {
@@ -229,22 +233,22 @@ namespace tgbot1
                     if (!messageret.EndsWith(".jpg"))
                     {
                         await botClient.SendTextMessageAsync(chatId: message.Chat, text: messageret, replyToMessageId: message.MessageId);
-                        Console.WriteLine($"бот ответил '{message.Chat.Username}' '{messageret}' на сообщение '{message.Text}' в чате {message.Chat.FirstName}.");
+                        Console.WriteLine($"бот ответил '{Username}' '{messageret}' на сообщение '{message.Text}' в чате {Chat_Name}.");
                     }
                     else
                     {
                         await using Stream stream = System.IO.File.OpenRead($"photo_memory//{messageret}");
                         await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{messageret}"), replyToMessageId: message.MessageId);
-                        Console.WriteLine($"бот скинул нюдсы '{message.Chat.Username}' на сообщение '{message.Text}' в чате {message.Chat.FirstName}.");
+                        Console.WriteLine($"бот скинул нюдсы '{Username}' на сообщение '{message.Text}' в чате {Chat_Name}.");
                     }
                 }
                 else
                 {
-                    Answers(message);
+                    Answers(message, Username, Chat_Name);
                 }
             }
         }
-        public static async void ForComands(Message message, string[] comands, BD_Mesege bD_Mesege)
+        public static async void ForComands(Message message, string[] comands, BD_Mesege bD_Mesege, string Username, string Chat_Name)
         {
             for (int i = 0; i < comands.Length; i++)
             {
@@ -260,7 +264,7 @@ namespace tgbot1
                                     if (sreply != null)
                                     {
                                         await botClient.SendTextMessageAsync(message.Chat, sreply, disableNotification: true, replyToMessageId: message.MessageId);
-                                        Console.WriteLine($"'{message.Chat.Username}' посмотрел ответы в чате '{message.Chat.FirstName}'");
+                                        Console.WriteLine($"'{message.Chat.Username}' посмотрел ответы в чате '{Chat_Name}'");
                                         return;
                                     }
                                     await botClient.SendTextMessageAsync(message.Chat, "не найдено", disableNotification: true);
@@ -268,39 +272,45 @@ namespace tgbot1
                                 case "/creply-sm":
                                     string? a = Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Text, null);
                                     await botClient.SendTextMessageAsync(message.Chat, a ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' создал ответ в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' создал ответ в чате '{Chat_Name}'.");
                                     return;
                                 case "/creply-tm":
                                     string? b = Creply_sm(message.Text, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Text, null);
                                     await botClient.SendTextMessageAsync(message.Chat, b ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' создал ответ в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' создал ответ в чате '{Chat_Name}'.");
                                     return;
                                 case "/delreply-sm":
                                     string? c = Creply_sm(message.Text, message.Chat.Id.ToString(), "/delreply-sm", BD_Comand.Delreply, BD_Type.Sm, BD_Mesege.Text, null);
                                     await botClient.SendTextMessageAsync(message.Chat, c ?? "команда не удалена\nпоходу её нет", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' удалил ответ в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' удалил ответ в чате '{Chat_Name}'.");
                                     return;
                                 case "/delreply-tm":
                                     string? d = Creply_sm(message.Text.ToLower(), message.Chat.Id.ToString(), "/delreply-tm", BD_Comand.Delreply, BD_Type.Tm, BD_Mesege.Text, null);
                                     await botClient.SendTextMessageAsync(message.Chat, d ?? "команда не удалена\nпоходу её нет", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' удалил ответ в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' удалил ответ в чате '{Chat_Name}'.");
                                     return;
                                 case "/start":
                                     await botClient.SendTextMessageAsync(message.Chat, "Это бот. НЕ ЧЕЛОВЕК. Чтобы понять нажмите \n/help", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' вызвал start в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' вызвал start в чате '{message.Chat.FirstName}'.");
                                     return;
                                 case "/help":
                                     bool boo = await BezSpama(message);
                                     if (boo) return;
-                                    await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/botinfo\n/cringe\n/sreply\n/creply-sm|tm\n/delreply-sm|tm", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' вызвал help в чате '{message.Chat.FirstName}'.");
+                                    await botClient.SendTextMessageAsync(message.Chat, "Список команд:\n/help\n/botinfo\n/chatid\n/cringe\n/sreply\n/creply-sm|tm\n/delreply-sm|tm", disableNotification: true, replyToMessageId: message.MessageId);
+                                    Console.WriteLine($"'{Username}' вызвал help в чате '{Chat_Name}'.");
                                     return;
                                 case "/botinfo":
                                     bool bo = await BezSpama(message);
                                     if (bo) return;
                                     await botClient.SendTextMessageAsync(message.Chat, "втыкаю...", disableNotification: true);
-                                    Console.WriteLine($"'{message.Chat.Username}' вызвал botinfo в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' вызвал botinfo в чате '{Chat_Name}'.");
                                     await botClient.SendTextMessageAsync(chatId: message.Chat, text: SiseInfo(message.Chat.Id), disableNotification: true, replyToMessageId: message.MessageId);
+                                    return;
+                                case "/chatid":
+                                    bool bq = await BezSpama(message);
+                                    if (bq) return;
+                                    Console.WriteLine($"'{Username}' вызвал chatid в чате '{Chat_Name}'.");
+                                    await botClient.SendTextMessageAsync(chatId: message.Chat, text: message.Chat.Id.ToString(), disableNotification: true, replyToMessageId: message.MessageId);
                                     return;
                                 case "/cringe":
                                     bool bp = await BezSpama(message);
@@ -318,13 +328,13 @@ namespace tgbot1
                                     string filename1 = SavePhotoAsync(message).Result;
                                     string? a = Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-sm", BD_Comand.Creply, BD_Type.Sm, BD_Mesege.Photo, filename1);
                                     await botClient.SendTextMessageAsync(message.Chat, a ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' создал ответ в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' создал ответ в чате '{Chat_Name}'.");
                                     return;
                                 case "/creply-tm":
                                     string filename2 = SavePhotoAsync(message).Result;
                                     string? b = Creply_sm(message.Caption, message.Chat.Id.ToString(), "/creply-tm", BD_Comand.Creply, BD_Type.Tm, BD_Mesege.Photo, filename2);
                                     await botClient.SendTextMessageAsync(message.Chat, b ?? "команда не создана\nмб у тебя ошибка", disableNotification: true, replyToMessageId: message.MessageId);
-                                    Console.WriteLine($"'{message.Chat.Username}' создал в чате '{message.Chat.FirstName}'.");
+                                    Console.WriteLine($"'{Username}' создал в чате '{Chat_Name}'.");
                                     return;
                             }
             }
