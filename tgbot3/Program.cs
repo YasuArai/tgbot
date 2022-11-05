@@ -93,7 +93,7 @@ namespace tgbot1
         public static int CringeRand { get; private set; }
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.1.3.0"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.1.4.2"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name, int Cringe)
@@ -102,7 +102,8 @@ namespace tgbot1
             BotName = Name;
             CringeRand = Cringe;
             Start_bot();
-            Thread myThread = new Thread(new ThreadStart(Timer));
+            Thread myThread = new Thread(Timer);
+            myThread.Start();
             Console.WriteLine($"Название бота: {BotName}");
             Console.WriteLine("бот работает");
             while (true)
@@ -132,11 +133,10 @@ namespace tgbot1
         {
             try
             {
-                string[] strm = Console.ReadLine().Split(" ");
+                string[]? strm = Console.ReadLine()?.Split(" ");
                 string str = "";
-                for (int i = 1; i < strm.Length; i++)
-                    str += strm[i] + " ";
-                await botClient.SendTextMessageAsync(chatId: strm[0], text: "CONSOLE: " + str);
+                for (int i = 1; i < strm?.Length; i++) str += strm[i] + " ";
+                await botClient.SendTextMessageAsync(chatId: strm?[0] ?? "", text: "CONSOLE: " + str);
             }
             catch
             {
@@ -194,43 +194,62 @@ namespace tgbot1
                 Nummesege = Timemesege = 0;
             return false;
         }
-        public static async void RandomImage(Message message, string crige)
+        public static async void ForRandomImage(Message message, string crige)
         {
-            try
+            bool cringe;
+            do
+                cringe = await RandomImage(message, crige);
+            while (cringe);
+        }
+        public static async Task<bool> RandomImage(Message message, string crige)
+        {
+            if (crige == "")
+                crige = "empty message";
+            if (NumCringe > 20)
             {
-                if (NumCringe > 10)
-                {
-                    NumCringe = 0;
-                    return;
-                }
-                string url = $"https://yandex.ru/images/search?text={crige}";
-                Random random = new Random();
-                string xPath = $"//div[@class='serp-item serp-item_type_search serp-item_group_search serp-item_pos_{random.Next(1, 20)} serp-item_scale_yes justifier__item i-bem']";
-                string html = string.Empty;
-                string userAgent = Leaf.xNet.Http.RandomUserAgent();
-                using Leaf.xNet.HttpRequest request = new Leaf.xNet.HttpRequest();
-                {
-                    request.UserAgent = userAgent;
-                    html = request.Get(url).ToString();
-                }
-                HtmlAgilityPack.HtmlDocument HTML_document = new HtmlAgilityPack.HtmlDocument();
-                HTML_document.LoadHtml(html);
-                HtmlAgilityPack.HtmlNode node = HTML_document.DocumentNode.SelectSingleNode(xPath);
-                Console.WriteLine(node);
-                string json = node.Attributes[1].Value;
-                Root item = Newtonsoft.Json.JsonConvert.DeserializeObject<Root>(json);
-                string DownLoadurl = item.SerpItem.preview[0].origin.url;
-                Console.WriteLine(DownLoadurl);
-                using (WebClient client = new WebClient())
-                    client.DownloadFile(new Uri(DownLoadurl), $"photo_memory//{message.MessageId}.png");
-                await using Stream stream = System.IO.File.OpenRead($"photo_memory//{message.MessageId}.png");
-                await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{message.MessageId}.png"), replyToMessageId: message.MessageId);
+                NumCringe = 0;
+                return false;
             }
-            catch (Exception)
+            string url = $"https://yandex.ru/images/search?text={crige}";
+            Random random = new Random();
+            string xPath = $"//div[@class='serp-item serp-item_type_search serp-item_group_search serp-item_pos_{random.Next(1, 30)} serp-item_scale_yes justifier__item i-bem']";
+            string html = string.Empty;
+            string userAgent = Leaf.xNet.Http.RandomUserAgent();
+            using Leaf.xNet.HttpRequest request = new Leaf.xNet.HttpRequest();
+            {
+                request.UserAgent = userAgent;
+                html = request.Get(url).ToString();
+            }
+            HtmlAgilityPack.HtmlDocument HTML_document = new HtmlAgilityPack.HtmlDocument();
+            HTML_document.LoadHtml(html);
+            HtmlAgilityPack.HtmlNode node = HTML_document.DocumentNode.SelectSingleNode(xPath);
+            Console.Write(0);
+            if (node == null)
             {
                 NumCringe++;
-                RandomImage(message, crige);
+                return true;
             }
+            Console.Write(1);
+            string json = node.Attributes[1].Value;
+            Root item = Newtonsoft.Json.JsonConvert.DeserializeObject<Root>(json);
+            string? DownLoadurl = item.SerpItem.preview[0].origin?.url;
+            if (DownLoadurl == null)
+            {
+                NumCringe++;
+                return true;
+            }
+            if (!DownLoadurl.EndsWith(".jpg") || !DownLoadurl.EndsWith(".png"))
+            {
+                NumCringe++;
+                return true;
+            }
+            Console.WriteLine(2);
+            Console.WriteLine(DownLoadurl);
+            using (WebClient client = new WebClient())
+                client.DownloadFile(new Uri(DownLoadurl), $"photo_memory//{message.MessageId}.jpg");
+            await using Stream stream = System.IO.File.OpenRead($"photo_memory//{message.MessageId}.jpg");
+            await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{message.MessageId}.jpg"), replyToMessageId: message.MessageId);
+            return false;
         }
         public static async void ForBd(Message message, string Username, string Chat_Name)
         {
@@ -241,7 +260,7 @@ namespace tgbot1
                 bool rand = random.Next(1, CringeRand) == 1;
                 string[] creplym = message.Text.ToLower().Split('\n');
                 string? messageret = bD.BD_Initialize(message.Chat.Id.ToString(), creplym[0], BD_Comand.nul);
-                if (rand && message.Text.Length < 10) RandomImage(message, message.Text);
+                if (rand && message.Text.Length < 10) ForRandomImage(message, message.Text);
                 if (messageret != null)
                 {
                     bool boo = await BezSpama(message);
@@ -333,7 +352,7 @@ namespace tgbot1
                                     bool bp = await BezSpama(message);
                                     if (bp) return;
                                     string cringe = message.Text.Substring(comands[i].Length);
-                                    if (true) RandomImage(message, cringe);
+                                    if (cringe.Length < 15) ForRandomImage(message, cringe);
                                     return;
                             }
                 if (bD_Mesege == BD_Mesege.Photo)
