@@ -93,7 +93,7 @@ namespace tgbot1
         public static int CringeRand { get; private set; }
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.1.4.2"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.1.4.5"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name, int Cringe)
@@ -238,18 +238,28 @@ namespace tgbot1
                 NumCringe++;
                 return true;
             }
-            if (!DownLoadurl.EndsWith(".jpg") || !DownLoadurl.EndsWith(".png"))
+            Console.Write(DownLoadurl);
+            if (!DownLoadurl.EndsWith(".jpg"))
             {
                 NumCringe++;
                 return true;
             }
             Console.WriteLine(2);
-            Console.WriteLine(DownLoadurl);
-            using (WebClient client = new WebClient())
-                client.DownloadFile(new Uri(DownLoadurl), $"photo_memory//{message.MessageId}.jpg");
-            await using Stream stream = System.IO.File.OpenRead($"photo_memory//{message.MessageId}.jpg");
-            await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{message.MessageId}.jpg"), replyToMessageId: message.MessageId);
-            return false;
+            try
+            {
+                using (WebClient client = new WebClient())
+                    client.DownloadFile(new Uri(DownLoadurl), $"photo_memory//{message.MessageId}.jpg");
+                await using Stream stream = System.IO.File.OpenRead($"photo_memory//{message.MessageId}.jpg");
+                await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{message.MessageId}.jpg"), replyToMessageId: message.MessageId);
+                return false;
+            }
+            catch
+            {
+                NumCringe++;
+                return true;
+            }
+
+            
         }
         public static async void ForBd(Message message, string Username, string Chat_Name)
         {
