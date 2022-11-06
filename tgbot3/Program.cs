@@ -93,7 +93,7 @@ namespace tgbot1
         public static int CringeRand { get; private set; }
         public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
         public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-        public static string BotVersion { get; } = "1.1.4.5"; // тута лежит версия если нада можно взять
+        public static string BotVersion { get; } = "1.1.4.9"; // тута лежит версия если нада можно взять
         public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
 
         public ALO_bot(string Token, string Name, int Cringe)
@@ -183,6 +183,7 @@ namespace tgbot1
         }
         public static async Task<bool> BezSpama(Message message)
         {
+            Nummesege++;
             if (Nummesege > 11 & Timemesege > 30)
             {
                 Nummesege = Timemesege = 0;
