@@ -1,88 +1,17 @@
-﻿using Microsoft.Data.Sqlite;
-using Microsoft.Win32;
-using System.Diagnostics;
-using System.Management;
-using System.Net;
-using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
-using tgbot3;
 
-namespace tgbot1
+namespace tgbot
 {
     enum BD_mod { GET, SET }
     enum BD_Comand { Creply, Delreply, Sreply, nul }
     enum BD_Type { Sm, Tm }
     enum BD_Mesege { Text, Photo }
-    class ALO_Props
-    {
-        protected static void Create_props()
-        {
-            if (!Directory.Exists("Properties"))
-                Directory.CreateDirectory("Properties"); // создаёт папку если таковой нет
-            if (!System.IO.File.Exists("Properties\\set.txt"))
-            {
-                var file = System.IO.File.CreateText("Properties\\set.txt");
-                file.Close();
-                StreamWriter sw = new StreamWriter("Properties\\set.txt");
-                sw.WriteLine("Token : [ctrl+v Token]\nBotName : [BotName]\nCringeRand : [50]"); // что будет в документе
-                Console.WriteLine("Текстовый документ был создан/перезаписан\nПроверте путь Properties\\set.txt");
-                sw.Close();
-                Console.ReadLine();
-            }
-        } // создаёт документ
 
-        protected static void Replase_Props()
-        {
-            if (!System.IO.File.Exists("Properties\\set.txt"))
-                return;
-            System.IO.File.Delete("Properties\\set.txt");
-            Create_props();
-        } // перезаписывает
-
-        public static string Get_props(int i, string lastname)
-        {
-            try
-            {
-                char[] chars = lastname.ToCharArray();
-                string[] file = System.IO.File.ReadAllLines("Properties\\set.txt");
-                string props = file[i];
-                props = props.TrimStart(chars); // удаляет 1 слово
-                props = props.Trim(new char[] { ' ', ':', ' ', '[', ']' }); // защита от дибила
-                if (lastname == "Token" && !(props.Length == 46)) // мало букв
-                {
-                    Console.WriteLine("Не коректные данные");
-                    Replase_Props();
-                }
-                return props;
-            }
-            catch (Exception)
-            {
-                Exception();
-                throw;
-            }
-        }
-
-        protected static void Exception()
-        {
-            Console.WriteLine("Не коректные данные");
-            Replase_Props();
-            Create_props();
-        }
-    } // класс получения настроек
-
-    class Tgbot
-    {
-        static void Main(string[] args)
-        {
-            new ALO_bot(ALO_Props.Get_props(0, "Token"), ALO_Props.Get_props(1, "BotName"), int.Parse(ALO_Props.Get_props(2, "CringeRand"))); // создаём класс ALO_bot и в конструктор добовляем токен и имя
-        }
-    } // Main тут методы не создавать
-
-    class ALO_bot
+    internal class ALO_bot
     {
         private static TelegramBotClient botClient;
         private static BD bD = new();
@@ -446,165 +375,9 @@ namespace tgbot1
                    + $"\nВерсия: {BotVersion}"
                    + $"\nИнформация о сборке: {Infosbork}"
                    + $"\nChatId: {id}"
-                   + $"\nОС Хоста: {getOSInfo()}"
-                   + $"\nИмя Хоста: {Environment.MachineName}"
-                   + $"\nПроц Хоста: {GetHardwareInfo("Win32_Processor", "Name")[0]}"
                    + $"\nUpTime: {ts.Days} д. {ts.Hours} ч. {ts.Minutes} м. {ts.Seconds} с."
-                   + $"\nКол-во свободной оперативной памяти: {mem.NextValue()} MB"
-                   + $"\nКол-во оперативной памяти занимаемой ботом: {process.PrivateMemorySize64 / 1024 / 1024} MB"
                    + $"\nкодер: Muly"
                    + $"\nидеи и консультация: CyanRed";
         } // метод сис инфо
-
-        static List<string> GetHardwareInfo(string WIN32_Class, string ClassItemField)
-        {
-            List<string> result = new List<string>();
-            using ManagementObjectSearcher searcher = new("SELECT * FROM " + WIN32_Class);
-            try
-            {
-                foreach (ManagementObject obj in searcher.Get())
-                {
-                    result.Add(obj[ClassItemField].ToString().Trim());
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            return result;
-        } // получение проца
-        private static string getOSInfo()
-        {
-            {
-                string key = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
-                using (RegistryKey? regKey = Registry.LocalMachine.OpenSubKey(key))
-                {
-                    if (regKey != null)
-                    {
-                        try
-                        {
-                            string? name = regKey.GetValue("ProductName").ToString();
-                            if (name == "") return "Значение отсутствует";
-                            else
-                                return $"{name}";
-                        }
-                        catch (Exception ex)
-                        {
-                            return ex.Message;
-                        }
-                    }
-                    else
-                        return "Не удалось получить значение ключа в реестре";
-                }
-            } // получение винды
-        } // получение винды
-    }
-
-    class BD
-    {
-        public string? BD_Initialize(string chat_name, string qu, BD_Comand comand)
-        {
-            string sqlExpression = "SELECT * FROM creply";
-            using (var connection = new SqliteConnection("Data Source=memory.db"))
-            {
-                connection.Open();
-                SqliteCommand command = new SqliteCommand(sqlExpression, connection);
-                using (SqliteDataReader reader = command.ExecuteReader())
-                {
-                    if (reader.HasRows) // если есть данные
-                    {
-                        if (comand == BD_Comand.Sreply)
-                        {
-                            string ret = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
-                            int num = 0;
-                            int phots = 0;
-                            while (reader.Read()) // построчно считываем данные
-                            {
-                                if (reader[1].ToString() == chat_name && reader[2].ToString() == qu)
-                                {
-                                    if (!reader[3].ToString().EndsWith(".jpg"))
-                                        ret += reader[3].ToString() + "\n";
-                                    else
-                                        phots++;
-                                    num++;
-                                }
-                            }
-                            if (num == 0) return null;
-                            return ret + $"\nфотов: {phots}";
-                        }
-                        List<string?> strings = new List<string?>();
-                        while (reader.Read()) // построчно считываем данные
-                        {
-                            Regex wordFilter = new Regex($"{reader[2]}");
-                            if (reader[1].ToString() == chat_name && reader[2].ToString() == qu && reader[4].ToString() == "Sm")
-                                strings.Add(reader[3].ToString());
-                            else if (reader[1].ToString() == chat_name && wordFilter.IsMatch(qu) && reader[4].ToString() == "Tm")
-                                strings.Add(reader[3].ToString());
-                        }
-                        int ListLeng = strings.Count;
-                        if (ListLeng == 0) return null;
-                        Random random = new Random();
-                        int rand = random.Next(ListLeng);
-                        return strings[rand];
-                    }
-                    return null;
-                }
-            }
-        }
-        public string? BD_Initialize(string chat_name, string[] Cr_qu, BD_Comand comand, BD_Type type)
-        {
-            if (Cr_qu.Length < 2 && comand == BD_Comand.Creply)
-                return null;
-            if (Cr_qu[0] == "" || Cr_qu[0] == " ")
-                return null;
-            if (type == BD_Type.Tm && Cr_qu[0].Length < 3)
-                return null;
-            string? sqlExpression = null;
-            using (var connection = new SqliteConnection("Data Source=memory.db"))
-            {
-                connection.Open();
-                SqliteCommand? command = null;
-                switch (comand)
-                {
-                    case BD_Comand.Creply:
-                        if (Cr_qu.Length == 2)
-                            sqlExpression = $"INSERT INTO creply (re, q, type, chatId) VALUES (@re, @q, '{type}', {chat_name})";
-                        if (Cr_qu.Length == 3)
-                            sqlExpression = $"INSERT INTO creply (re, q, type, chatId) VALUES (@re, @q, '{type}', {Cr_qu[2]})";
-                        command = new SqliteCommand(sqlExpression, connection);
-                        SqliteParameter re = new SqliteParameter("@re", Cr_qu[1]);
-                        command.Parameters.Add(re);
-                        SqliteParameter q = new SqliteParameter("@q", Cr_qu[0]);
-                        command.Parameters.Add(q);
-                        break;
-                    case BD_Comand.Delreply:
-                        if (Cr_qu.Length == 1)
-                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q= @q AND type= '{type}'";
-                        else
-                        {
-                            sqlExpression = $"DELETE  FROM creply WHERE chatId={chat_name} AND q= @q AND re = @re AND type= '{type}'";
-                            command = new SqliteCommand(sqlExpression, connection);
-                            SqliteParameter g = new SqliteParameter("@q", Cr_qu[0]);
-                            command.Parameters.Add(g);
-                            SqliteParameter i = new SqliteParameter("@re", Cr_qu[1]);
-                            command.Parameters.Add(i);
-                            break;
-                        }
-                        command = new SqliteCommand(sqlExpression, connection);
-                        SqliteParameter t = new SqliteParameter("@q", Cr_qu[0]);
-                        command.Parameters.Add(t);
-                        break;
-                }
-                int number = command.ExecuteNonQuery();
-                Console.WriteLine($"изменено объектов: {number}");
-                if (number == 0)
-                    return null;
-                if (comand == BD_Comand.Creply)
-                    return "команда создана";
-                else if (comand == BD_Comand.Delreply)
-                    return "команда удалена";
-                return null;
-            }
-        }
-    }
+    } 
 }
