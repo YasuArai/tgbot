@@ -6,21 +6,22 @@ using Telegram.Bot.Types.InputFiles;
 
 namespace tgbot
 { 
-  class ALO_bot
-  {
-    private static TelegramBotClient botClient;
-    public static int Timemesege { get; private set; }
-    public static long UpTime { get; private set; }
-    public static string BotToken { get; private set; } // тута лежит токен если нада можно взять
-    public static string? BotName { get; private set; } // тута лежит имя если нада можно взять
-    public static string BotVersion { get; } = "1.1.4.9"; // тута лежит версия если нада можно взять
-    public static string Infosbork { get; } = "final, release"; // тута лежит инфосборк если нада можно взять
-
-    public ALO_bot(string Token, string Name)
+    class TgbotCore
     {
-      BotToken = Token;
-      BotName = Name;
-      botClient = new TelegramBotClient(BotToken);
+        private static TelegramBotClient botClient;
+        public static int Timemesege { get; private set; }
+        public static long UpTime { get; private set; }
+        public static string BotToken { get; private set; } = ""; // тута лежит токен если нада можно взять
+        public static string BotName { get; private set; } = ""; // тута лежит имя если нада можно взять
+        public static string BotVersion { get; } = "1.1.4.13"; // тута лежит версия если нада можно взять
+        public static string Infosbork { get; } = "final, dev, gold"; // тута лежит инфосборк если нада можно взять
+
+
+        public TgbotCore(string token, string name)
+        {
+            BotToken = token;
+            BotName = name;
+            botClient = new TelegramBotClient(BotToken);
             using var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
             var receiverOptions = new ReceiverOptions
@@ -36,8 +37,7 @@ namespace tgbot
 
         public void Timer()
         {
-            while (true)
-            {
+            while (true) {
                 Timemesege++;
                 UpTime++;
                 Thread.Sleep(1000);
@@ -48,7 +48,7 @@ namespace tgbot
         {
             if (update.Type == UpdateType.Message)
                 if (update.Message != null)
-                    Comand(update.Message);
+                    await Comand(update.Message);
         }
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -56,22 +56,24 @@ namespace tgbot
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }
 
-        public static void Comand(Message message)
+        private static async Task Comand(Message message)
         {
             string[] comands = new string[] { "/sreply", "/creply-sm", "/creply-tm", "/delreply-sm", "/delreply-tm", "/start", "/help", "/botinfo", "/chatid", "/cringe" };
             string? Username = message.From?.FirstName;
-            if (Username == null) Username = "кто-то";
+            if (Username == null)
+                Username = "кто-то";
             string? Chat_Name = message.Chat.Username;
-            if (Chat_Name == null) Chat_Name = message.Chat.Id.ToString();
+            if (Chat_Name == null)
+                Chat_Name = message.Chat.Id.ToString();
             if (message.Type == MessageType.Text)
                 if (message.Text?.ToCharArray()[0] == '/')
-                    ForComands(message, comands, BD_Mesege.Text, Username, Chat_Name);
+                    await ForComands(message, comands, BD_Mesege.Text, Username, Chat_Name);
                 else
-                    ForBd(message, Username, Chat_Name);
+                    await ForBd(message, Username, Chat_Name);
             else if (message.Type == MessageType.Photo)
                 if (message.Caption?.ToCharArray()[0] == '/')
-                    ForComands(message, comands, BD_Mesege.Photo, Username, Chat_Name);
-            return;
+                    await ForComands(message, comands, BD_Mesege.Photo, Username, Chat_Name);
+        return;
         } // тута все команды
 
         public static void Answers(Message message, string Username, string Chat_Name)
@@ -79,35 +81,30 @@ namespace tgbot
             Console.WriteLine($"[{DateTime.Now}] '{Username}' написал '{message.Text}' в чате '{Chat_Name}'.");
         }
 
-        public static async void ForBd(Message message, string Username, string Chat_Name)
+        public static async Task ForBd(Message message, string Username, string Chat_Name)
         {
             var Date = DateTime.Now;
-            if (message.Text != null)
-            {
+            if (message.Text != null) {
                 string[] creplym = message.Text.ToLower().Split('\n');
-                string? messageret = TgbotDB.Read(message.Chat.Id.ToString(), creplym[0], BD_Comand.nul);
-                if (messageret != null)
-                {
-                    if (!messageret.EndsWith(".jpg"))
-                    {
+                string messageret = TgbotDB.Read(message.Chat.Id.ToString(), creplym[0], BD_Comand.nul);
+                if (messageret != null) {
+                    if (!messageret.EndsWith(".jpg")) {
                         await botClient.SendTextMessageAsync(chatId: message.Chat, text: messageret, replyToMessageId: message.MessageId);
                         Console.WriteLine($"[{Date}] бот ответил '{Username}' '{messageret}' на сообщение '{message.Text}' в чате {Chat_Name}.");
                     }
-                    else
-                    {
+                    else {
                         await using Stream stream = System.IO.File.OpenRead($"photo_memory//{messageret}");
                         await botClient.SendPhotoAsync(chatId: message.Chat, photo: new InputOnlineFile(content: stream, fileName: $"photo_memory//{messageret}"), replyToMessageId: message.MessageId);
                         Console.WriteLine($"[{Date}] бот скинул нюдсы '{Username}' на сообщение '{message.Text}' в чате {Chat_Name}.");
                     }
                 }
-                else
-                {
+                else {
                     Answers(message, Username, Chat_Name);
                 }
             }
         }
 
-        public static async void ForComands(Message message, string[] comands, BD_Mesege bD_Mesege, string Username, string Chat_Name)
+        public static async Task ForComands(Message message, string[] comands, BD_Mesege bD_Mesege, string Username, string Chat_Name)
         {
             var Date = DateTime.Now;
             string creply = "";
@@ -116,8 +113,7 @@ namespace tgbot
                 if (bD_Mesege == BD_Mesege.Text)
                     if (message.Text != null)
                         if (message.Text.ToLower().StartsWith(comands[i]))
-                            switch (comands[i])
-                            {
+                            switch (comands[i]) {
                                 case "/sreply":
                                     creply = Creply_sm(message.Text, message.Chat.Id.ToString(), "/sreply", BD_Comand.Sreply, BD_Type.Sm, BD_Mesege.Text, null);
                                     if (creply == "") {
@@ -210,25 +206,24 @@ namespace tgbot
             if (bD_Mesege == BD_Mesege.Photo)
             {
                 string[] crepym = creply.Split('\n');
-                if (crepym.Length == 1)
-                {
+                if (crepym.Length == 1) {
                     creplym = new string[2];
                     creplym[0] = crepym[0];
                     creplym[1] = "";
                 }
-                else if (crepym.Length == 2)
-                {
+                else if (crepym.Length == 2) {
                     creplym = new string[3];
                     creplym[0] = crepym[0];
                     creplym[1] = "";
                     creplym[2] = crepym[1];
                 }
                 creplym[0].ToLower();
-                for (int i = 0; i < creplym.Length; i++)
+                for (int i = 0; i < creplym.Length; i++) {
                     if (i != 1)
                         creplym[i] = creplym[i].Trim();
                     else
                         creplym[i] = photoname ?? "";
+                }
             }
             if (bD_Comand == BD_Comand.Sreply)
                 return TgbotDB.Read(Id, creplym[0], BD_Comand.Sreply);

@@ -17,49 +17,45 @@ namespace tgbot
             {
                 connection.Open();
                 SqliteCommand command = new SqliteCommand(sqlExpression, connection);
-                using (SqliteDataReader reader = command.ExecuteReader())
+                using (SqliteDataReader sqlreader = command.ExecuteReader())
                 {
-                    if (!reader.HasRows) // если есть данные
-                    {
+                    if (!sqlreader.HasRows) { // если есть данные
                         return "";
                     }
-                    if (dbcommand == BD_Comand.Sreply)
-                    {
-                      string ret = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
-                      int num = 0;
-                      int phots = 0;
-                      while (reader.Read()) // построчно считываем данные
-                      {
-                        if (reader[1].ToString() == chatname && reader[2].ToString() == qu)
+                    if (dbcommand == BD_Comand.Sreply) {
+                        string res = $"Ниже ответы на \"{qu}\"\r\n———————————\n";
+                        int num = 0;
+                        int phots = 0;
+                        while (sqlreader.Read()) // построчно считываем данные
                         {
-                          if (!reader[3].ToString().EndsWith(".jpg"))
-                            ret += reader[3].ToString() + "\n";
-                          else {
-                            phots++;
-                          }
-                          num++;
+                            if (sqlreader[1].ToString() == chatname && sqlreader[2].ToString() == qu) {
+                                if (!sqlreader[3].ToString().EndsWith(".jpg"))
+                                    res += sqlreader[3].ToString() + "\n";
+                                else {
+                                    phots++;
+                                }
+                                num++;
+                            }
                         }
-                      }
-                      if (num == 0)
-                        return "";
-                      return ret + $"\nфотов: {phots}";
-                    }
-                        List<string?> strings = new List<string?>();
-                        while (reader.Read()) // построчно считываем данные
-                        {
-                            Regex wordFilter = new Regex($"{reader[2]}");
-                            if (reader[1].ToString() == chatname && reader[2].ToString() == qu && reader[4].ToString() == "Sm")
-                                strings.Add(reader[3].ToString());
-                            else if (reader[1].ToString() == chatname && wordFilter.IsMatch(qu) && reader[4].ToString() == "Tm")
-                                strings.Add(reader[3].ToString());
-                        }
-                        int ListLeng = strings.Count;
-                        if (ListLeng == 0)
+                        if (num == 0)
                             return "";
-                        Random random = new Random();
-                        int rand = random.Next(ListLeng);
-                        return strings[rand];
+                        return res + $"\nфотов: {phots}";
                     }
+                    List<string?> strings = new List<string?>();
+                    while (sqlreader.Read()) { // построчно считываем данные
+                        Regex wordFilter = new Regex($"{sqlreader[2]}");
+                        if (sqlreader[1].ToString() == chatname && sqlreader[2].ToString() == qu && sqlreader[4].ToString() == "Sm")
+                            strings.Add(sqlreader[3].ToString());
+                        else if (sqlreader[1].ToString() == chatname && wordFilter.IsMatch(qu) && sqlreader[4].ToString() == "Tm")
+                            strings.Add(sqlreader[3].ToString());
+                    }
+                    int ListLeng = strings.Count;
+                    if (ListLeng == 0)
+                        return "";
+                    Random random = new Random();
+                    int rand = random.Next(ListLeng);
+                    return strings[rand];
+                }
             }
         }
         public static bool AddCommand(string chatname, string[] Cr_qu, BD_Comand dbcommand, BD_Type type)

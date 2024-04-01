@@ -11,7 +11,9 @@ namespace TgBot_Project
     {
         static void Main(string[] args)
         {
-            new ALO_bot(ALO_Props.Get_props(0, "Token"), ALO_Props.Get_props(1, "BotName"));
+            string token   = TgbotProps.GetProps(0, "Token");
+            string botname = TgbotProps.GetProps(1, "BotName");
+            new TgbotCore(token, botname);
         }
     }
 }
