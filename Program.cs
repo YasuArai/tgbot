@@ -13,7 +13,7 @@ namespace TgBot_Project
         {
             string token   = TgbotProps.GetProps(0, "Token");
             string botname = TgbotProps.GetProps(1, "BotName");
-            new TgbotCore(token, botname);
+            TgbotCore.Start(token, botname);
         }
     }
 }
